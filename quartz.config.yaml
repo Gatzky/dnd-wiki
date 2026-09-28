@@ -1,0 +1,389 @@
+# yaml-language-server: $schema=./quartz/plugins/quartz-plugins.schema.json
+#
+# Baza wiki - zasady gry
+#
+# JavaScript-callback options (custom sort/format functions) cannot be expressed
+# in YAML. Those live in `quartz.ts` as `loadQuartzConfig()` overrides.
+
+configuration:
+  pageTitle: "Nazwa wiki"
+  pageTitleSuffix: " · zasady gry"
+  enableSPA: true
+  # Popovers preview a linked rule on hover, so a reader can check a
+  # cross-reference without losing their place in the current rule.
+  enablePopovers: true
+  analytics: null
+  locale: pl-PL
+
+  # RSS links, OG image URLs and the sitemap are all built from this value
+  baseUrl: dnd-gatzky.dev
+
+  ignorePatterns:
+    - private
+    - templates
+    - .obsidian
+    # Obsidian note templates: raw scaffolding, never published.
+    - _szablony
+
+  theme:
+    fontOrigin: googleFonts
+    cdnCaching: true
+    typography:
+      title: Cormorant Garamond
+      header: Cormorant Garamond
+      body: Spectral
+      code: IBM Plex Mono
+    colors:
+      # "Archiwum Cytadeli" - a maester's archive of the realm's written law.
+      lightMode:
+        light: "#EFE7D8" # parchment page background
+        lightgray: "#D6C9B0" # rule lines, borders
+        gray: "#A89572" # heavier borders, muted ornament
+        darkgray: "#241F1B" # body text, iron-gall ink
+        dark: "#1A1512" # headings, icons
+        secondary: "#8C2F22" # links, rubric red
+        tertiary: "#9A7B3F" # hover states, bronze
+        highlight: "rgba(140, 47, 34, 0.10)"
+        textHighlight: "#E8DCC4"
+      # "Candlelit vault"
+      darkMode:
+        light: "#16130F"
+        lightgray: "#3A3227"
+        gray: "#6B5F4C"
+        darkgray: "#E6DAC5"
+        dark: "#F2E9D8"
+        secondary: "#D2603F" # ember - the light-mode red is unreadable here
+        tertiary: "#C9A227"
+        highlight: "rgba(210, 96, 63, 0.15)"
+        textHighlight: "#4A3D22"
+
+plugins:
+  # --- Transformers -------------------------------------------------------
+  - source: "@quartz-community/created-modified-date"
+    enabled: true
+    options:
+      defaultDateType: modified
+      # frontmatter first: `created`/`modified` in the page are authoritative,
+      # so dates survive a shallow CI clone with no git history.
+      priority:
+        - frontmatter
+        - git
+        - filesystem
+    order: 10
+
+  # Left at stock settings. Rule pages carry almost no code, and this is the
+  # shipped default - nothing is added beyond it.
+  - source: "@quartz-community/syntax-highlighting"
+    enabled: true
+    options:
+      theme:
+        light: github-light
+        dark: github-dark
+      keepBackground: false
+    order: 20
+
+  # Local plugin: Discord-style icon shortcodes. `:zloto:` in the source is
+  # expanded to the matching embed from content/ikonki before anything is
+  # parsed, so the rules can be written the way the game is played. Must stay
+  # ahead of obsidian-flavored-markdown, which turns the expansion into an
+  # actual image. Lives in ./plugins/ikonki, wired in as a `file:` dependency
+  # like the other local plugins.
+  - source: "@wiki/ikonki"
+    enabled: true
+    options:
+      directory: ikonki
+    order: 28
+
+  - source: "@quartz-community/obsidian-flavored-markdown"
+    enabled: true
+    options:
+      enableInHtmlEmbed: false
+      enableCheckbox: true
+    order: 30
+
+  - source: "@quartz-community/github-flavored-markdown"
+    enabled: true
+    options:
+      # SmartyPants rewrites straight quotes into English curly quotes
+      # (“ ”), which destroys Polish „ ” typed directly in the source.
+      # Off, so quotation marks render exactly as written. See CONTRIBUTING.md.
+      enableSmartyPants: false
+      linkHeadings: true
+    order: 40
+
+  # Local plugin: Polish typography (non-breaking spaces after one-letter
+  # words). Lives in ./plugins/typografia-pl and is wired in as a `file:`
+  # dependency in package.json, so npm links it into node_modules. Referencing
+  # the path directly here would make Quartz create a symlink, which needs
+  # elevation on Windows.
+  - source: "@wiki/typografia-pl"
+    enabled: true
+    order: 75
+
+  - source: "@quartz-community/table-of-contents"
+    enabled: true
+    order: 50
+    layout:
+      position: right
+      priority: 30
+
+  - source: "@quartz-community/crawl-links"
+    enabled: true
+    options:
+      markdownLinkResolution: shortest
+    order: 60
+
+  - source: "@quartz-community/description"
+    enabled: true
+    order: 70
+
+  # Explicitly off: no formulas in these rules, and KaTeX is a large payload.
+  - source: "@quartz-community/latex"
+    enabled: false
+    order: 80
+
+  - source: "@quartz-community/citations"
+    enabled: false
+    order: 85
+  - source: "@quartz-community/hard-line-breaks"
+    enabled: false
+    order: 90
+  - source: "@quartz-community/ox-hugo"
+    enabled: false
+    order: 91
+  - source: "@quartz-community/roam"
+    enabled: false
+    order: 92
+
+  # Off deliberately. Quartz core already emits the Google Fonts <link> from
+  # `theme.typography` above, and this plugin emits a second, competing one.
+  # Left to its `useThemeFonts` default it ignored the configured families and
+  # requested the stock Schibsted Grotesk / Source Sans Pro, so every page
+  # downloaded two different font sets and Polish text could land in whichever
+  # arrived first. Disabling it leaves exactly one correct request.
+  #
+  # Verified: the emitted URL serves the `latin-ext` subset (unicode-range
+  # U+0100-02BA) for all three families, which is what covers ą ć ę ł ń ś ź ż.
+  # `ó` comes from the base `latin` subset.
+  - source: "@quartz-community/quartz-fonts"
+    enabled: false
+
+  - source: "@quartz-themes/core"
+    enabled: false
+
+  # --- Filters ------------------------------------------------------------
+  # `draft: true` pages are dropped from the build, and therefore from the
+  # search index and the RSS feed as well.
+  - source: "@quartz-community/remove-draft"
+    enabled: true
+
+  - source: "@quartz-community/explicit-publish"
+    enabled: false
+
+  # --- Emitters -----------------------------------------------------------
+  # Keeps Discord links alive after a page is renamed (see `aliases` in
+  # CONTRIBUTING.md).
+  - source: "@quartz-community/alias-redirects"
+    enabled: true
+
+  - source: "@quartz-community/content-index"
+    enabled: true
+    options:
+      enableSiteMap: true
+      enableRSS: true
+
+  - source: "@quartz-community/favicon"
+    enabled: true
+
+  # Link previews when a rule is pasted into Discord.
+  - source: "@quartz-community/og-image"
+    enabled: true
+
+  # Explicitly off: GitHub Pages only, and this deploys to Cloudflare Pages.
+  - source: "@quartz-community/cname"
+    enabled: false
+
+  # --- Page types ---------------------------------------------------------
+  - source: "@quartz-community/content-page"
+    enabled: true
+  - source: "@quartz-community/folder-page"
+    enabled: true
+  - source: "@quartz-community/tag-page"
+    enabled: true
+  - source: "@quartz-community/canvas-page"
+    enabled: false
+  - source: "@quartz-community/bases-page"
+    enabled: false
+
+  # --- Components ---------------------------------------------------------
+  # Kept enabled, but mobile-only. On desktop the masthead nav covers every
+  # section and each section folder lists its own rules, so a tree in a left
+  # column is redundant. On mobile it is still the menu drawer.
+  - source: "@quartz-community/explorer"
+    enabled: true
+    layout:
+      position: left
+      priority: 60
+      display: mobile-only
+
+  # Masthead navigation. Local plugin in ./plugins/nawigacja, wired in as a
+  # `file:` dependency like the typography plugin.
+  - source: "@wiki/nawigacja"
+    enabled: true
+    layout:
+      position: left
+      priority: 15
+
+  # Explicitly off: decorative at this page count, and it fights the design.
+  - source: "@quartz-community/graph"
+    enabled: false
+
+  - source: "@quartz-community/search"
+    enabled: true
+    layout:
+      position: left
+      priority: 20
+      group: toolbar
+      groupOptions:
+        grow: true
+
+  - source: "@quartz-community/backlinks"
+    enabled: true
+    layout:
+      position: right
+      priority: 50
+
+  - source: "@quartz-community/article-title"
+    enabled: true
+    layout:
+      position: beforeBody
+      priority: 10
+
+  # Reading time is meaningless for reference pages that are consulted, not
+  # read end to end. The date label ("ostatnio zmodyfikowano:") is added by
+  # scripts/patch-polish.mjs, since it is not exposed as an option.
+  - source: "@quartz-community/content-meta"
+    enabled: true
+    options:
+      showReadingTime: false
+      showComma: false
+    layout:
+      position: beforeBody
+      priority: 20
+
+  - source: "@quartz-community/tag-list"
+    enabled: true
+    layout:
+      position: beforeBody
+      priority: 30
+
+  - source: "@quartz-community/page-title"
+    enabled: true
+    layout:
+      position: left
+      priority: 10
+
+  - source: "@quartz-community/darkmode"
+    enabled: true
+    layout:
+      position: left
+      priority: 30
+      group: toolbar
+
+  - source: "@quartz-community/reader-mode"
+    enabled: true
+    layout:
+      position: left
+      priority: 35
+      group: toolbar
+
+  - source: "@quartz-community/breadcrumbs"
+    enabled: true
+    options:
+      # Defaults to the English "Home".
+      rootName: Strona główna
+      # A middot rather than a chevron: the trail is set as a small-caps rubric
+      # above the title, where an arrow reads as an interface control.
+      spacerSymbol: "·"
+      resolveFrontmatterTitle: true
+      showCurrentPage: true
+    layout:
+      position: beforeBody
+      priority: 5
+      condition: not-index
+
+  # Explicitly off.
+  - source: "@quartz-community/comments"
+    enabled: false
+
+  - source: "@quartz-community/footer"
+    enabled: true
+    options:
+      # Rendered in source order: Discord sits on the left of the footer row,
+      # the changelog on the right. See the footer rules in custom.scss.
+      links:
+        Serwer Discord: https://discord.gg/xb6TF9yNR
+        Dziennik zmian: /dziennik-zmian
+    layout:
+      position: footer
+      priority: 50
+
+  - source: "@quartz-community/recent-notes"
+    enabled: false
+
+  - source: "@quartz-community/spacer"
+    enabled: true
+    options: {}
+    order: 25
+    layout:
+      position: left
+      priority: 25
+      display: mobile-only
+
+  # The frontmatter properties table is redundant here - title, tags and dates
+  # are already rendered by article-title, tag-list and content-meta.
+  - source: "@quartz-community/note-properties"
+    enabled: true
+    options:
+      includeAll: false
+      includedProperties: []
+      excludedProperties: []
+      hidePropertiesView: true
+      delimiters: ---
+      language: yaml
+    order: 5
+
+  - source: "@quartz-community/unlisted-pages"
+    enabled: true
+    options: {}
+    order: 45
+
+  - source: "@quartz-community/encrypted-pages"
+    enabled: false
+
+  - source: "@quartz-community/stacked-pages"
+    enabled: false
+
+layout:
+  groups:
+    toolbar:
+      priority: 35
+      direction: row
+      gap: 0.5rem
+  byPageType:
+    "404":
+      positions:
+        beforeBody: []
+        left: []
+        right: []
+    content: {}
+    # A folder page is a listing, so reader mode has nothing to strip down to.
+    # The right column stays, though: a folder with a folder note (Intrygi.md
+    # serving /intrygi/) is a real rule page and needs its backlinks like any
+    # other. The table of contents hides itself when a page has no headings.
+    folder:
+      exclude:
+        - reader-mode
+    tag:
+      exclude:
+        - reader-mode

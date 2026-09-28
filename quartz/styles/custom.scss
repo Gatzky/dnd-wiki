@@ -1,0 +1,3019 @@
+@use "./variables.scss" as *;
+
+/* =========================================================================
+   "Archiwum Cytadeli" — a maester's archive of the realm's written law.
+   =========================================================================
+
+   The site is a reference document people read for twenty minutes at a
+   stretch, so the theme stays restrained: one ornamental idea (rubrication in
+   red, ruled off with a hairline) carries the character, and everything else
+   gets out of the way of the text.
+
+   Colours come from quartz.config.yaml as CSS variables. Two tones are defined
+   here rather than there, because the palette has no entry that is both muted
+   and legible — see --marginalia-ink below.
+
+   Accessibility rules that must not be broken:
+     - body text >= 4.5:1 in both modes (audited by `npm run check-contrast`)
+     - --gray and --tertiary are ornament only, never text on the page
+       background (--gray is ~2.4:1 on parchment)
+     - no blackletter anywhere, at any size
+   ========================================================================= */
+
+:root {
+  /* The palette's `gray` is the obvious pick for a muted margin note but sits
+     at ~2.4:1 on parchment. This is the muted-but-legible substitute: 6.29:1
+     light, 6.79:1 dark. */
+  --marginalia-ink: #5c5145;
+
+  /* Section palette. Named here rather than written into the seven
+     `:has([aria-current])` rules below, because the search panel needs the same
+     seven colours without a section being current — a result row is marked with
+     the accent of the shelf it came from, not of the page the reader is on. */
+  --akcent-podstawy: #6b6250; /* kamień */
+  --akcent-dwor: #7a4a3a; /* palona sjena */
+  --akcent-gospodarka: #7d6320; /* ochra */
+  --akcent-dyplomacja: #46586b; /* łupek */
+  --akcent-intrygi: #4a4553; /* cień */
+  --akcent-militaria: #6d2f2f; /* burgund */
+  --akcent-niesamowitosci: #3f5545; /* ciemny mech */
+
+  /* Ornamental divider glyphs. */
+  --ornament: "◇◇◇";
+
+  /* Width of the margin-note column and the gutter before it. Shared by the
+     page grid and the masthead so the search control lines up with the
+     hairline that starts the margin column — they cannot drift apart. */
+  --aside-width: 14rem;
+  --aside-gap: 3rem;
+
+  /* Prose measure, tuned to land at 68-72 characters per line.
+
+     The number is not the character count: `ch` is the width of "0", which in
+     Spectral is narrower than the average Polish lowercase letter, so the value
+     has to run ahead of the target. Measured rather than assumed — 58ch gave
+     56 characters, and this gives ~70. Re-measure if the body face or size
+     changes; the relationship does not survive either. */
+  --measure: 72ch;
+
+  /* Paper grain. An feTurbulence tile at very low opacity, laid over the page
+     by a fixed pseudo-element so it never tiles against the scroll position and
+     never triggers a repaint. Deliberately weak enough to read as tooth in the
+     stock rather than as texture. */
+  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
+  --paper-grain-opacity: 0.05;
+
+  /* Blind stamp: an impression pressed into the stock, so it is built from a
+     light edge and a dark edge rather than from ink. */
+  --stamp-relief: rgba(255, 252, 245, 0.55);
+  --stamp-shadow: rgba(36, 31, 27, 0.13);
+
+  /* Crows watermark. A wood-engraving plate converted so that ink density
+     lives in the alpha channel, which makes it a mask rather than a picture —
+     see the "Crows" section below. Source plate and the prompt that made it
+     are in _grafika/ (untracked); this is the processed asset. */
+  --kruki: url("/static/kruki.png");
+  --kruki-ink: #6b5a45;
+  /* 0.08, not higher. The plate passes behind the margin column, and at the
+     densest point of a bird a heavier value pushes the marginalia ink under
+     4.5:1 against its own background — measured, and guarded by
+     `npm run check-contrast`. */
+  --kruki-opacity: 0.08;
+
+  /* Maester's chain, three links. Used as a mask so it takes `currentColor`
+     rather than shipping one asset per theme. */
+  --chain-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 20' fill='none' stroke='%23000' stroke-width='2.4'%3E%3Cellipse cx='13' cy='10' rx='11' ry='7'/%3E%3Cellipse cx='34' cy='10' rx='11' ry='7'/%3E%3Cellipse cx='55' cy='10' rx='11' ry='7'/%3E%3C/svg%3E");
+}
+
+:root[saved-theme="dark"] .page:has(a.tag-link[href$="/fluff"]) {
+  --sekcja-akcent: #c3a171;
+}
+
+:root[saved-theme="dark"] {
+  --marginalia-ink: #a99b82;
+
+  --akcent-podstawy: #b3a88e;
+  --akcent-dwor: #c98d73;
+  --akcent-gospodarka: #c9a94f;
+  --akcent-dyplomacja: #8fa6bd;
+  --akcent-intrygi: #a79bb5;
+  --akcent-militaria: #cd8072;
+  --akcent-niesamowitosci: #8fb096;
+
+  /* Grain on a dark ground reads as noise long before it reads as paper, so it
+     is pulled back rather than carried over at the same strength. */
+  --paper-grain-opacity: 0.03;
+  --stamp-relief: rgba(242, 233, 216, 0.07);
+  --stamp-shadow: rgba(0, 0, 0, 0.4);
+
+  /* On the dark ground the birds have to be painted in light rather than in
+     ink, and held lower: a pale shape reads as brighter than a dark one at the
+     same opacity, so the same value would shout here. */
+  --kruki-ink: #c8b89a;
+  --kruki-opacity: 0.1;
+}
+
+/* -------------------------------------------------------------------------
+   Material layer — paper grain
+
+   One fixed overlay for the whole document. `pointer-events: none` keeps it out
+   of hit-testing, and it sits behind content because the page itself is painted
+   over it; only the body background shows through.
+   ------------------------------------------------------------------------- */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--paper-grain);
+  opacity: var(--paper-grain-opacity);
+  mix-blend-mode: multiply;
+}
+
+:root[saved-theme="dark"] body::before {
+  /* Multiply on a near-black ground does nothing; screen lifts the grain
+     instead of crushing it. */
+  mix-blend-mode: screen;
+}
+
+/* The page has to sit above the overlay or the grain would wash over the text. */
+body > #quartz-root,
+.page {
+  position: relative;
+  z-index: 1;
+}
+
+/* -------------------------------------------------------------------------
+   Crows
+
+   The site is named for them, so they belong on it — but as a watermark
+   pressed into the stock, not as an illustration competing with the law.
+
+   Used as a *mask*, not as a picture: the plate carries only ink density in
+   its alpha channel and the colour comes from the theme, so one asset serves
+   both schemes and can never clash with either ground. Same technique as the
+   maester's chain and the section emblems.
+
+   Fixed to the viewport, so the birds hold still while the page scrolls over
+   them, and anchored to the bottom, where the leaf has run out and the body
+   background shows. The plate's own composition does the rest — its centre is
+   bare, so the reading column covers nothing worth seeing.
+   ------------------------------------------------------------------------- */
+
+@media all and (min-width: 800px) {
+  body::after {
+    content: "";
+    position: fixed;
+    inset: auto 0 0 0;
+    /* The box has to be as tall as the plate renders, or the mask is simply
+       cut off and the birds lose their heads. The plate is 1672x941, so its
+       height is 56.28% of its width; both are capped at the same place
+       (90rem wide -> 50.65rem tall) so the two can never drift apart. */
+    height: min(56.28vw, 50.65rem);
+    z-index: 0;
+    pointer-events: none;
+
+    /* Colour from the theme, shape from the plate. */
+    background-color: var(--kruki-ink);
+    opacity: var(--kruki-opacity);
+
+    -webkit-mask-image: var(--kruki);
+    mask-image: var(--kruki);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center bottom;
+    mask-position: center bottom;
+    /* Spans the viewport, capped so it stops growing on very wide screens.
+       The plate's outer thirds then fall either side of the reading leaf —
+       which is where the birds are — while its bare centre sits behind the
+       leaf and is never missed. Must stay in step with `height` above. */
+    -webkit-mask-size: min(100%, 90rem) auto;
+    mask-size: min(100%, 90rem) auto;
+  }
+}
+
+/* Below 800px the margins are gone and the leaf spans the screen, so the
+   watermark would be entirely hidden. Scoping it to the desktop breakpoint
+   also means a phone never downloads the plate at all. */
+
+/* -------------------------------------------------------------------------
+   Long-form reading surface
+   ------------------------------------------------------------------------- */
+
+article {
+  font-size: 1.125rem; /* 18px — these pages are read, not skimmed */
+  text-align: left;
+
+  /* Quartz's base stylesheet sets line-height on the block elements themselves,
+     so setting it on `article` alone is overridden and lands at ~1.5. These are
+     stated per element to actually reach the 1.7+ needed for long-form reading. */
+  p,
+  li,
+  dd,
+  blockquote {
+    line-height: 1.75;
+  }
+
+  p {
+    margin: 0 0 1.15em;
+  }
+}
+
+/* The measure.
+
+   The main column is ~45rem wide, which at 18px runs to roughly 95 characters
+   per line — far past the point where the eye reliably finds the next line.
+   Running text is capped; anything the reader scans in two dimensions rather
+   than reads left-to-right (tables, the formula blocks, images) is exempt and
+   keeps the full column, because narrowing those only adds scrolling.
+
+   Quartz wraps the rendered markdown in `.markdown-preview-view`, so the
+   children are addressed through that rather than as children of <article>.
+
+   Not applied to listing pages: a catalogue wants the width. */
+.center > article:not(:has(.page-listing)) > .markdown-preview-view {
+  > p,
+  > ul,
+  > ol,
+  > dl,
+  > blockquote,
+  > h1,
+  > h2,
+  > h3,
+  > h4,
+  > h5,
+  > h6,
+  > .callout {
+    max-width: var(--measure);
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Rubrication — the one ornamental idea that carries the whole theme.
+
+   A scribe marked section divisions in red ink (rubrum). h2 is the section
+   level in these rules, so it gets the red and a hairline rule beneath it.
+   ------------------------------------------------------------------------- */
+
+article h2 {
+  color: var(--secondary);
+  font-family: var(--headerFont);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin-top: 2.2em;
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--lightgray);
+}
+
+article h3 {
+  /* The same rubric red as h2. Set at ink colour, an h3 sat too close to the
+     body it introduced to be found while scanning — the size step alone was
+     not enough separation. It keeps the red but not h2's hairline rule, so the
+     two levels stay distinguishable. */
+  color: var(--secondary);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+
+  /* Upstream sizes h3 at 1.12rem against a 16px root — 17.92px — while the
+     article body runs at 1.125rem, so a subheading came out *smaller* than the
+     paragraphs under it, and in Cormorant, whose x-height is well below
+     Spectral’s, it read smaller still. Set in `em` rather than `rem` so it
+     stays a step above the body at whatever size the body is: 20.7px on
+     desktop, 17.3px against the 15px mobile body. h2 is 1.244em, so the three
+     levels now run 18 / 20.7 / 22.4 — and h2 keeps the red and its hairline,
+     which is what actually separates the two heading levels. */
+  font-size: 1.15em;
+}
+
+/* -------------------------------------------------------------------------
+   Drop cap (inicjał)
+
+   Applied by the typografia-pl plugin, which adds `.inicjal` to the opening
+   paragraph of a rule page that has at least 200 characters of text. The home
+   page, the changelog and short pages never receive it — CSS cannot count
+   characters, so that decision is made at build time.
+   ------------------------------------------------------------------------- */
+
+article p.inicjal::first-letter {
+  font-family: var(--titleFont);
+  font-size: 3.2em;
+  line-height: 0.82;
+  color: var(--secondary);
+  float: left;
+  padding: 0.06em 0.09em 0 0;
+  font-weight: 600;
+}
+
+/* A floated 3.2em capital eats most of a phone's line length. */
+@media all and (max-width: 480px) {
+  article p.inicjal::first-letter {
+    font-size: 2.4em;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Marginalia — table of contents and "Cytowane przez"
+
+   Styled as margin notes rather than panels: no box, no fill, just a hairline
+   separating them from the text, set smaller and in italic Spectral.
+   ------------------------------------------------------------------------- */
+
+.right.sidebar {
+  /* Below 1200px Quartz treats this column as a wide strip under the article:
+     it lays the panels out in a row and caps each at 24rem. That suits its
+     stacked default layout, not this one — between 800 and 1200 the column is
+     a real margin, and on a phone a row puts two panels in half a screen each.
+
+     The cap is the worse half. Quartz's scrolling-list mechanism relies on
+     `ul.overflow { max-height: 100% }` resolving against a definite parent
+     height, and a `max-height` alone is not one — so the list ignored the cap,
+     grew past the clamped `<details>`, and (with nothing hiding the overflow)
+     spilled straight down through the footer. On the worst page that was a
+     29-entry list, 814px of it inside a 384px box.
+
+     Applied at every width rather than from 800px up, which is what left
+     phones broken while the desktop range was already handled. */
+  flex-direction: column;
+
+  & > * {
+    /* `flex: 1` would stretch the panels to equal heights, and the 24rem cap
+       is what spills. Both off; the panels size to their content. */
+    flex: 0 0 auto;
+    max-height: none;
+  }
+
+  .toc,
+  .backlinks {
+    font-family: var(--bodyFont);
+    font-size: 0.875rem;
+    font-style: italic;
+    color: var(--marginalia-ink);
+    border: none;
+    background: none;
+
+    /* Panel headings read as small caps labels: "SPIS TREŚCI", "CYTOWANE
+       PRZEZ". Set in the mono face because letterspaced uppercase in a serif
+       loses its rhythm at this size. */
+    & h2,
+    & h3 {
+      font-family: var(--codeFont);
+      font-style: normal;
+      font-size: 0.68rem;
+      font-weight: 400;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--marginalia-ink);
+      margin: 0 0 0.6rem;
+    }
+
+    /* The collapse control is chrome; the label is the point. */
+    & .toc-header,
+    & .title-button {
+      background: none;
+      border: none;
+      padding: 0;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    li {
+      margin: 0 0 0.42em;
+      line-height: 1.45;
+    }
+
+    a {
+      color: var(--marginalia-ink);
+      background-color: transparent;
+      text-decoration: none;
+
+      /* One line per entry, truncated rather than wrapped. A long rule title
+         like "Wprowadzenie Starszego nad Monetą" otherwise wraps to two or
+         three lines and the margin column stops reading as a scannable list.
+         The full title stays in the DOM, so screen readers still announce it
+         and hovering still opens the popover preview. */
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+
+      &:hover {
+        color: var(--secondary);
+      }
+    }
+
+    /* The active entry is the one piece of state here, so it gets ink. */
+    .in-view {
+      color: var(--darkgray);
+      font-style: normal;
+    }
+  }
+
+  /* Nested TOC levels step in rather than using bullets. */
+  .toc .depth-1 {
+    padding-left: 0.85rem;
+  }
+  .toc .depth-2 {
+    padding-left: 1.7rem;
+  }
+
+  /* Quartz caps these lists with `ul.overflow { max-height: 100% }` and hides
+     overflow on their wrapper — sized for the tall, fixed-height sidebar its
+     default layout assumes. Here the margin column is content-sized, so the cap
+     bought nothing and only ever clipped by the 8px of the list's own
+     `li.overflow-end` spacer, surfacing a scrollbar on hover. */
+  div:has(> .overflow),
+  ul.overflow,
+  ol.overflow {
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  /* That spacer only exists to feed the scroll-edge gradient. With nothing
+     scrolling it is dead space under the last entry. */
+  li.overflow-end {
+    display: none;
+  }
+
+  /* The fold arrow next to "SPIS TREŚCI".
+
+     Quartz collapses the list by shrinking `.toc` to `flex: 0 1 1.4rem` and
+     relying on its `overflow-y: hidden` to clip the entries. That depends on
+     the sidebar being a fixed-height flex container, which it is by default and
+     is not here — this column is sized to its content, so flex-basis never
+     shrank the item and the entries stayed put. The rule above also relaxes
+     `.toc`'s overflow (it matches `div:has(> .overflow)`), which removed the
+     clip the collapse depended on.
+
+     The toggle script sets `collapsed` on the list as well as the button, so
+     keying off the list hides it regardless of how the column is sized. The
+     button's `aria-expanded` already tracks the same state, and `display: none`
+     keeps the accessibility tree in step with it. */
+  ul.toc-content.collapsed {
+    display: none;
+  }
+
+  /* With the list hidden outright, Quartz's `flex: 0 1 1.4rem` on the collapsed
+     panel has nothing left to do — and it pinned `.toc` to 22.4px while the
+     header button needs 24px, leaving 2px poking out. Let the panel size to its
+     header instead. */
+  .toc:has(button.toc-header.collapsed) {
+    flex: 0 0 auto;
+    min-height: 0;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Masthead layout
+
+   Quartz's default frame is three columns: a tall left sidebar holding the
+   site title and navigation, the content, and a right sidebar. This site reads
+   as a printed reference, so the chrome moves into a masthead across the top
+   and the page keeps a single column of text with margin notes beside it.
+
+   The DOM is unchanged — `.left.sidebar` is simply re-placed as a full-width
+   row and laid out horizontally. No custom page frame is needed.
+
+   Applied from the tablet breakpoint (800px) up. Below that Quartz's stacked
+   mobile layout already does the right thing.
+   ------------------------------------------------------------------------- */
+
+@media all and (min-width: 800px) {
+  .page > #quartz-body {
+    grid-template-columns: minmax(0, 1fr) var(--aside-width);
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+      "masthead masthead"
+      "main     aside"
+      "foot     foot";
+    column-gap: var(--aside-gap);
+    row-gap: 0;
+    max-width: 66rem;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  .page > #quartz-body > .left.sidebar {
+    grid-area: masthead;
+
+    /* Override the tall sticky column: this is now a masthead row. */
+    position: static;
+    height: auto;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 2.2rem;
+    padding: 1.7rem 0 1rem;
+    border-bottom: 1px solid var(--lightgray);
+
+    /* The nav cannot shrink — its links are `white-space: nowrap` — so without
+       somewhere to wrap to, a crowded masthead squeezes the wordmark instead
+       and breaks "Uczta dla Wron" across three lines. Wrapping lets the nav
+       drop to its own row when the row runs out of space. */
+    flex-wrap: wrap;
+    row-gap: 0.8rem;
+  }
+
+  /* Never let the wordmark absorb the shortfall. */
+  .page > #quartz-body > .left.sidebar > .page-title {
+    flex: 0 0 auto;
+  }
+
+  /* Between the tablet and desktop breakpoints the six nav entries plus the
+     toolbar leave the wordmark almost nothing, so the nav takes a row of its
+     own: wordmark and controls on the first line, nav beneath. Above 1200px
+     everything fits on one line and the source order stands. */
+  @media all and (max-width: 1199px) {
+    .page > #quartz-body > .left.sidebar {
+      align-items: center;
+
+      & > .page-title {
+        order: 1;
+      }
+
+      & > .flex-component {
+        order: 2;
+      }
+
+      & > .site-nav {
+        order: 3;
+        flex: 1 0 100%;
+        gap: 1.2rem;
+      }
+    }
+  }
+
+  /* Search and the two toggles occupy exactly the margin-note column, so the
+     search icon starts on the same vertical line as the hairline below it
+     rather than floating free at the right edge. */
+  .page > #quartz-body > .left.sidebar > .flex-component {
+    margin-left: auto;
+    flex: 0 0 var(--aside-width);
+  }
+
+  .page > #quartz-body > .center {
+    grid-area: main;
+    min-width: 0;
+  }
+
+  .page > #quartz-body > .right.sidebar {
+    grid-area: aside;
+
+    position: sticky;
+    top: 2rem;
+    height: auto;
+    padding: 2.6rem 0 2rem 1.6rem;
+    gap: 2.2rem;
+
+    /* Grid items stretch by default, which would make this as tall as the
+       article — and an element taller than the viewport cannot stick. Sizing to
+       its content keeps the notes beside the reader on the way down. */
+    align-self: start;
+
+    /* No max-height and no overflow here on purpose. Constraining the height
+       made this a scroll container, which gave the panels inside a definite
+       height for Quartz's `ul.overflow { max-height: 100% }` to resolve
+       against. The list then clipped by exactly the 8px of its own
+       `li.overflow-end` spacer, so a scrollbar appeared on hover over margin
+       notes that were not actually too tall. Margin notes now size to their
+       content and the page scrolls normally. */
+    max-height: none;
+    overflow: visible;
+
+    /* One hairline for the whole margin column, rather than a box per panel. */
+    border-left: 1px solid var(--lightgray);
+
+    /* A catalogue page has no table of contents, no neighbours and usually no
+       backlinks, so the column comes out empty — but its padding still gave it
+       height, leaving a short rule ruled against nothing. `:has` rather than
+       `:empty`, which whitespace text nodes would defeat. */
+    &:not(:has(> *)) {
+      display: none;
+    }
+
+    & > .toc {
+      /* `.toc` is a flex column in the plugin's own stylesheet. */
+      display: flex;
+    }
+  }
+
+  .page > #quartz-body > footer {
+    grid-area: foot;
+
+    /* The footer spans both grid columns, but the links row should line up
+       with the text column and stop where the margin column begins — otherwise
+       the right-hand link sits underneath the sidebar and reads as belonging
+       to it. This is the content column's width, derived from the same two
+       variables the grid uses.
+
+       Quartz pins the footer with `min-width: 100%` and `margin: 0 auto`. The
+       min-width always beats a max-width, and once released the auto margins
+       shrink-wrap the element instead of stretching it — so the width is
+       stated outright and the left margin reset. */
+    min-width: 0;
+    width: calc(100% - var(--aside-width) - var(--aside-gap));
+    max-width: none;
+    margin-left: 0;
+    margin-right: auto;
+  }
+
+  /* The stock 6rem gap above the article assumed a tall sidebar beside it. */
+  .page > #quartz-body .page-header {
+    margin-top: 2.4rem;
+  }
+}
+
+/* On a phone the masthead cannot be one row: wordmark, three nav links, search
+   and two toggles need ~500px. It wraps instead — wordmark and controls on the
+   first line, nav on its own line below, scrolling sideways within itself if
+   the labels ever outgrow the width. */
+@media all and (max-width: 800px) {
+  .page > #quartz-body > .left.sidebar {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 1rem;
+    padding: 1rem 0 0.6rem;
+    border-bottom: 1px solid var(--lightgray);
+
+    /* The masthead is a grid item, so its automatic minimum size is its
+       min-content width — driven by the nav, whose links do not wrap. With six
+       entries that came to 458px and sized the whole grid column to 458px
+       inside a 375px screen, dragging every element on the page off to the
+       right. Releasing the minimum lets the column stay at the viewport width
+       and the nav scroll inside itself instead. */
+    min-width: 0;
+  }
+
+  /* Quartz's mobile spacer exists to separate items in the stacked sidebar we
+     have replaced. Its wrapper is `display: contents`, so it becomes a flex
+     item here and pushes the wordmark off the left edge, into the controls. */
+  .page > #quartz-body > .left.sidebar .spacer {
+    display: none;
+  }
+
+  .page > #quartz-body > .left.sidebar > .page-title {
+    order: -1;
+    margin-right: auto;
+  }
+
+  /* The toolbar takes its own full-width row rather than being pushed to the
+     right edge. On desktop it lines up with the margin-note column, which is
+     why it carries `margin-left: auto` there; on a phone there is no margin
+     column to line up with, so that only left a ~190px hole and squeezed the
+     search field into the last third of the screen. */
+  .page > #quartz-body > .left.sidebar > .flex-component {
+    margin-left: 0;
+    flex: 1 1 100%;
+  }
+
+  /* The field itself only claims 0.3 of its share, which on a full-width row
+     left a 140px hole between it and the sun. Let it take the whole span up to
+     the toggles — a wider tap target, and the row reads as one control strip
+     rather than three things adrift. */
+  /* Each toolbar item sits in a wrapper the layout engine generates. Those
+     wrappers come out 39px tall while the controls inside are 32px, and an
+     inline child sits on the text baseline rather than in the middle — so the
+     search field rendered 3px below the sun and book beside it. Making the
+     wrappers flex containers puts all three on one centre line.
+
+     Mobile only. The same 3px offset exists on desktop, but making those
+     wrappers flex there also lets the plugin's own `flex-grow: .3` take
+     effect and the search pill shrinks from 168px to 111px, so the desktop
+     masthead is left exactly as it was. */
+  .page > #quartz-body > .left.sidebar > .flex-component > * {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Search result excerpts.
+
+     The excerpt is built client-side by the search plugin from a fixed context
+     window, so it is the same length whatever the screen. On a phone that
+     measured 362 characters on average — nine lines, and a single result card
+     up to 342px tall, so barely two hits fit on screen and the list stops
+     being scannable. Clamped to four lines, which is where the measured
+     average halves; the plugin still ellipsises the tail itself, and the full
+     text is one tap away on the page.
+
+     `line-clamp` needs the `-webkit-box` display and a hidden overflow to
+     take effect; the unprefixed property is included for browsers that have
+     moved on. */
+  .page .card-description {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+  }
+
+  .page > #quartz-body > .left.sidebar > .flex-component .search {
+    flex: 1 1 auto;
+    /* The search plugin caps itself at 14rem, which is exactly the margin-note
+       column it aligns with on desktop. There is no such column on a phone, so
+       the cap only reintroduced the hole. */
+    max-width: none;
+  }
+
+  .site-nav {
+    order: 3;
+    flex-basis: 100%;
+    gap: 1.2rem;
+    overflow-x: auto;
+
+    /* A flex item's automatic minimum size is its content, and these links do
+       not wrap — so with six of them the nav reported a 458px minimum and
+       widened the whole masthead past a 375px screen instead of scrolling.
+       `min-width: 0` lets it be narrower than its content so the overflow
+       above actually takes effect. */
+    min-width: 0;
+    max-width: 100%;
+
+    /* Hide the scrollbar; the row is short and the overflow is incidental. */
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  .site-nav-link {
+    font-size: 0.95rem;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Footer
+
+   Two rows: the links spread across a rule — Discord on the left, the
+   changelog on the right — and the "built with" line centred beneath them.
+
+   The markup puts the <p> before the <ul>, so `order` swaps them rather than
+   the component being rewritten.
+   ------------------------------------------------------------------------- */
+
+.page > #quartz-body > footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+
+  /* No rule, no top margin, no top padding. The page frame already emits an
+     <hr> above the footer, styled by base.scss as a 1px --lightgray bar — a
+     border-top in the same colour landed directly beneath it and read as a
+     double line. The <hr> is the separator, and its own 2rem bottom margin is
+     all the breathing room the footer needs. */
+  margin-top: 0;
+  padding-top: 0;
+
+  & > ul {
+    order: 1;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    /* The links are the only two items, so space-between alone places them. */
+    flex-wrap: wrap;
+
+    & > li {
+      margin: 0;
+    }
+  }
+
+  & > p {
+    order: 2;
+    text-align: center;
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--marginalia-ink);
+  }
+
+  a {
+    font-family: var(--headerFont);
+    font-size: 1.05rem;
+    color: var(--dark);
+    background-color: transparent;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+
+    &:hover {
+      color: var(--secondary);
+      border-bottom-color: var(--secondary);
+    }
+  }
+
+  /* The Quartz credit is small print, not a destination. */
+  & > p a {
+    font-family: inherit;
+    font-size: inherit;
+    color: var(--marginalia-ink);
+
+    &:hover {
+      color: var(--secondary);
+    }
+  }
+}
+
+/* On a phone the two links stack rather than sitting at opposite edges of a
+   343px row, where they would read as unrelated.
+
+   The separator and spacing come back here too. On desktop the frame's <hr>
+   sits directly above the footer and is separator enough — a border there put
+   a second line a few pixels under the first. On a phone the margin notes
+   ("Cytowane przez") stack between that <hr> and the footer, so the <hr> no
+   longer marks the end of the page and the footer runs straight on from the
+   backlinks. This rule is that missing edge. */
+@media all and (max-width: 800px) {
+  .page > #quartz-body > footer {
+    margin-top: 1rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--lightgray);
+  }
+
+  .page > #quartz-body > footer > ul {
+    justify-content: center;
+    gap: 0.4rem 1.6rem;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Breadcrumbs — the "BOOK II · WARFARE" rubric above the title
+   ------------------------------------------------------------------------- */
+
+.breadcrumb-container {
+  font-family: var(--codeFont);
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--secondary);
+  margin-bottom: 0.5rem;
+
+  /* Maester's chain — the one decorative motif on the page.
+
+     Three interlocking links, drawn rather than lettered, sitting at the head
+     of the rubric line. A chain because it belongs to the archive keeper
+     rather than to any house: no crest, no faction colour, and it carries the
+     marginalia ink so it never competes with the rubric beside it. Masked from
+     `currentColor` so it follows the theme without a second asset. */
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+
+  &::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 2.1rem;
+    height: 0.62rem;
+    background-color: var(--marginalia-ink);
+    opacity: 0.55;
+    -webkit-mask-image: var(--chain-mark);
+    mask-image: var(--chain-mark);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-position: left center;
+    mask-position: left center;
+  }
+
+  a {
+    color: var(--secondary);
+    background-color: transparent;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--tertiary);
+      text-decoration: underline;
+    }
+  }
+
+  /* The separator is punctuation, not content. */
+  p {
+    color: var(--gray);
+    margin: 0 0.15rem;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Page title and metadata line
+   ------------------------------------------------------------------------- */
+
+.article-title {
+  font-family: var(--headerFont);
+  /* Regular weight: at this size Cormorant carries the page on its own, and
+     semibold reads as shouting next to the rubric above it. */
+  font-weight: 400;
+  font-size: 2.6rem;
+  line-height: 1.1;
+  letter-spacing: 0.005em;
+  margin: 0 0 0.5rem;
+  color: var(--dark);
+}
+
+.content-meta {
+  font-family: var(--bodyFont);
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--marginalia-ink);
+  margin: 0 0 2rem;
+}
+
+/* Listing entries no longer carry a date (see scripts/patch-polish.mjs), which
+   leaves an empty <p class="meta"> as the grid's first item. It has no width of
+   its own, but its 1em right margin would still indent every title. Zeroing the
+   margin is enough - hiding it would drop a grid item and shift the remaining
+   two into the wrong columns. */
+li.section-li > .section > .meta:empty {
+  margin: 0;
+}
+
+/* -------------------------------------------------------------------------
+   Search control in the masthead
+   ------------------------------------------------------------------------- */
+
+@media all and (min-width: 800px) {
+  .search .search-button {
+    /* No box: the icon's own left edge has to land on the hairline that starts
+       the margin column, and a bordered, padded button would push it ~18px in
+       (1px border + 8.8px padding + the icon's own 8px margin). Borderless also
+       matches the two toggles beside it. */
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0.34rem 0;
+    gap: 0.45rem;
+
+    & > svg {
+      margin: 0;
+    }
+
+    /* The word "Szukaj" is redundant next to the icon once the shortcut badge
+       is showing; it stays as the button's accessible name. */
+    & > p {
+      display: none;
+    }
+
+    /* Keyboard hint. Quartz binds `key === "k" && (ctrlKey || metaKey)`, so
+       both shortcuts really work and both are shown — readers are on Windows
+       as often as macOS. Decorative: the button's accessible name carries the
+       meaning, so a screen reader does not read the badge out. */
+    &::after {
+      content: "⌘ K / Ctrl K";
+      font-family: var(--codeFont);
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+      color: var(--marginalia-ink);
+    }
+
+    /* Without a border, colour carries the hover affordance. */
+    &:hover {
+      color: var(--secondary);
+
+      &::after {
+        color: var(--secondary);
+      }
+    }
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Section wordmark
+   ------------------------------------------------------------------------- */
+
+.page-title {
+  font-family: var(--titleFont);
+  font-size: 1.9rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  line-height: 1.1;
+  margin: 0;
+
+  a {
+    color: var(--dark);
+    background-color: transparent;
+
+    &:hover {
+      color: var(--secondary);
+    }
+  }
+
+  /* Subtitle, set from the configured pageTitleSuffix. Decorative, so it is
+     hidden from assistive tech — the suffix is already in the document title. */
+  &::after {
+    content: "zasady gry";
+    display: block;
+    font-family: var(--bodyFont);
+    font-style: italic;
+    font-size: 0.9rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: var(--marginalia-ink);
+    margin-top: 0.15rem;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Ornamental divider — `---` in markdown
+   ------------------------------------------------------------------------- */
+
+article hr {
+  border: none;
+  height: auto;
+  background: none;
+  margin: 2.4em 0;
+  text-align: center;
+
+  &::before {
+    content: var(--ornament);
+    display: block;
+    color: var(--gray);
+    font-size: 0.8rem;
+    letter-spacing: 0.7em;
+    /* letter-spacing adds a trailing gap; nudge back to stay optically centred */
+    text-indent: 0.7em;
+    line-height: 1;
+    padding: 0.55em 0;
+    border-top: 1px solid var(--lightgray);
+    border-bottom: 1px solid var(--lightgray);
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Resource icons (ikonki)
+
+   The rules are written with an icon standing in for each resource, talent and
+   holding type — ":zloto:" on Discord becomes an embedded PNG here. They are
+   24x24 sprites sitting inside a sentence, so every part of Quartz's default
+   `img` treatment is wrong for them: a 1rem vertical margin breaks the line
+   box, the 5px radius clips the artwork, and `content-visibility: auto` makes
+   the browser skip layout for something that must be measured inline.
+
+   Sized in `em` rather than at the source resolution: at 17px body text a
+   fixed 24px icon towers over the line, and the same page is read at 16px on a
+   phone. Height, not width, because the icons are square and a few may not be.
+
+   Matched on the path, so any image stored under content/ikonki/ is
+   treated as an inline icon and nothing else has to be marked up.
+   ------------------------------------------------------------------------- */
+
+article img[src*="ikonki/"] {
+  display: inline-block;
+  height: 1.15em;
+  width: auto;
+  /* Optical, not metric: the artwork sits high in its 24px box, so aligning the
+     baseline exactly leaves the icon floating above the x-height. */
+  vertical-align: -0.2em;
+  margin: 0 0.06em;
+  border-radius: 0;
+  content-visibility: visible;
+}
+
+/* Upstream (base.scss) turns any `<em>` that follows an `<img>` into a block
+   caption and lifts it 1rem, for the `![obraz](…)` + `*podpis*` pattern.
+
+   `img + em` is an adjacent-sibling combinator, and those skip text nodes — so
+   once icons became inline shortcodes, the FIRST italic anywhere after an icon
+   in the same paragraph was being torn out onto its own full-width line and
+   shoved upwards. „…czardrzewo, *nieurodzaj (1/3)*" broke in exactly that way.
+
+   An inline icon is never a captioned figure, so it is excluded. A caption
+   under a real image still works. */
+article p > img[src*="ikonki/"] + em {
+  display: inline;
+  transform: none;
+}
+
+/* -------------------------------------------------------------------------
+   Tables
+
+   Stat tables are where a theme like this normally falls apart: decorative
+   serif numerals in a column of figures are unreadable and misalign. Numbers
+   are set in the mono face with tabular figures and right-aligned; the wrapper
+   scrolls rather than letting a wide table push the page sideways on a phone.
+   ------------------------------------------------------------------------- */
+
+article {
+  /* Quartz wraps tables in .table-container; belt-and-braces for bare tables. */
+  .table-container,
+  table {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  table {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+    margin: 1.5em 0;
+  }
+
+  th,
+  td {
+    border: none;
+    border-bottom: 1px solid var(--lightgray);
+    padding: 0.5em 0.85em;
+    vertical-align: baseline;
+  }
+
+  /* Inline icons inside table cells.
+
+     A cell has to escape the wikilink's pipes (`![[icon\|alt\|18]]`) or the
+     escape characters would split the row. The parser unescapes the first one
+     but leaves the second, so the size parameter drags a backslash into the alt
+     text — screen readers then announce "strzelcy backslash". Cells therefore
+     write `![[icon\|alt]]` with no size, and the sizing happens here. */
+  table img {
+    height: 1.05em;
+    width: auto;
+    vertical-align: text-bottom;
+  }
+
+  thead th {
+    font-family: var(--headerFont);
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    /* The header row is a rule across the table, not a tint block: it carries
+       full ink and a heavier rule beneath, so the eye finds the columns without
+       a filled band interrupting the page. */
+    color: var(--dark);
+    border-bottom: 2px solid var(--gray);
+    white-space: nowrap;
+  }
+
+  /* Alternating rows, kept faint enough to be a guide rather than a stripe —
+     these tables are read across, and losing your row costs a lookup. */
+  tbody tr:nth-child(even) {
+    background-color: color-mix(in srgb, var(--lightgray) 22%, transparent);
+  }
+
+  /* Figures line up down the column whatever the alignment, so a cost column
+     written left-aligned still reads as a column of numbers. */
+  td,
+  th {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* Numeric cells. Markdown's `---:` column alignment is the signal for a stat
+     column. Quartz emits it as an inline `style="text-align:right;"` with no
+     space after the colon; both spellings and the legacy `align` attribute are
+     matched so the rule cannot quietly stop applying.
+     Only `td` — a header stays a label in the header face, right-aligned by the
+     same inline style so it still sits over its column. */
+  td[align="right"],
+  td[style*="text-align:right"],
+  td[style*="text-align: right"] {
+    font-family: var(--codeFont);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    font-size: 0.92em;
+    white-space: nowrap;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Wax-seal callouts
+
+   Six project-specific types on top of Quartz's defaults. Square corners and a
+   single 3px left border in rubric red — a seal pressed into the margin, not a
+   rounded notification box.
+
+   Labels are set here rather than left to the plugin's auto-title, which
+   capitalises the callout's ASCII name and would render "Przyklad" (no ł) and
+   "Opcjonalna" instead of "Zasada opcjonalna". Authors can still override a
+   label by writing it after the tag.
+   ------------------------------------------------------------------------- */
+
+.callout {
+  border-radius: 0;
+  border: none;
+  border-left: 3px solid var(--color);
+  background-color: var(--bg);
+  padding: 0.1rem 1rem;
+  margin: 1.5em 0;
+
+  .callout-title {
+    padding: 0.6rem 0;
+    gap: 0.5rem;
+  }
+
+  .callout-title-inner {
+    font-family: var(--codeFont);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color);
+  }
+}
+
+/* The six project callouts share the rubric-red seal treatment. `zmiana` and
+   `opcjonalna` are muted to bronze/ink because they annotate rather than rule. */
+.callout[data-callout="orzeczenie"],
+.callout[data-callout="errata"],
+.callout[data-callout="zmiana"],
+.callout[data-callout="przyklad"],
+.callout[data-callout="uwaga"],
+.callout[data-callout="opcjonalna"],
+.callout[data-callout="procedura"],
+.callout[data-callout="wyjatek"],
+.callout[data-callout="wzor"] {
+  --color: var(--secondary);
+  --border: var(--secondary);
+  --bg: var(--highlight);
+  --callout-icon: none;
+
+  /* No icon: the uppercase mono label is the marker. */
+  .callout-icon,
+  .callout-title .callout-icon {
+    display: none;
+  }
+}
+
+.callout[data-callout="zmiana"],
+.callout[data-callout="opcjonalna"] {
+  --color: var(--marginalia-ink);
+  --bg: transparent;
+  border-left-color: var(--gray);
+}
+
+/* `[!wzor]` — a formula for computing a value.
+   Set apart from the rulings above: bronze rather than rubric, because it
+   states arithmetic rather than a decision, and the expression itself is set
+   in the mono face with tabular figures so the operators line up and digits
+   keep an even width. Bronze is ornament-only on parchment (~3.2:1), so it is
+   the border and the label sits in the marginalia ink, which passes 4.5:1. */
+.callout[data-callout="wzor"] {
+  --color: var(--marginalia-ink);
+  --bg: transparent;
+  border-left-color: var(--tertiary);
+
+  .callout-content {
+    font-family: var(--codeFont);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    font-size: 0.95em;
+    line-height: 1.7;
+
+    /* The formula is the whole point — let it hold the ink. */
+    strong {
+      color: var(--dark);
+      font-weight: 600;
+    }
+
+    /* Inline icons sit on the text baseline rather than riding above it. */
+    img {
+      vertical-align: text-bottom;
+    }
+  }
+}
+
+/* Label text itself comes from the markdown pipeline — see the "Polish callout
+   labels" patch in scripts/patch-polish.mjs, which supplies the correct Polish
+   for these names while leaving an author-written title alone. */
+
+/* -------------------------------------------------------------------------
+   The four rule forms — Wzór, Procedura, Wyjątek, Przykład
+
+   A formula, a sequence to follow, a carve-out and a worked case are four
+   different things, and set as plain indented italics they all read as
+   quotations. Each gets its own edge treatment so the shape alone says what
+   kind of block it is before a word is read, and a blind-stamped label rather
+   than a coloured chip: an impression pressed into the stock, built from a
+   light edge above and a dark edge below, with no ink of its own.
+
+   Restraint is the point — the differences are in the border, not in fill.
+   ------------------------------------------------------------------------- */
+
+.callout[data-callout="wzor"] > .callout-title .callout-title-inner,
+.callout[data-callout="procedura"] > .callout-title .callout-title-inner,
+.callout[data-callout="wyjatek"] > .callout-title .callout-title-inner,
+.callout[data-callout="przyklad"] > .callout-title .callout-title-inner {
+  color: color-mix(in srgb, var(--marginalia-ink) 88%, transparent);
+  text-shadow:
+    0 1px 0 var(--stamp-relief),
+    0 -1px 0 var(--stamp-shadow);
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+}
+
+/* Procedura — a sequence to work through, so the steps carry stamped numerals
+   and the block is bracketed top and bottom rather than fenced down one side:
+   a procedure has a beginning and an end. */
+.callout[data-callout="procedura"] {
+  --color: var(--marginalia-ink);
+  --bg: transparent;
+  border-left: none;
+  border-top: 1px solid var(--gray);
+  border-bottom: 1px solid var(--gray);
+  padding: 0.1rem 0 0.1rem 0.2rem;
+
+  .callout-content ol {
+    counter-reset: krok;
+    list-style: none;
+    padding-left: 2.4rem;
+
+    > li {
+      counter-increment: krok;
+      position: relative;
+
+      &::before {
+        content: counter(krok);
+        position: absolute;
+        left: -2.4rem;
+        width: 1.6rem;
+        text-align: right;
+        font-family: var(--codeFont);
+        font-variant-numeric: tabular-nums;
+        font-size: 0.82em;
+        color: var(--marginalia-ink);
+        text-shadow:
+          0 1px 0 var(--stamp-relief),
+          0 -1px 0 var(--stamp-shadow);
+      }
+    }
+  }
+}
+
+/* Wyjątek — a carve-out from the rule above it. Dashed, because the edge of an
+   exception is exactly what is not solid. */
+.callout[data-callout="wyjatek"] {
+  --color: var(--marginalia-ink);
+  --bg: transparent;
+  border-left: 3px dashed var(--gray);
+}
+
+/* Przykład — a worked case, not a ruling. A full hairline box sets it off as
+   something lifted out of the text and shown, and the content stays italic the
+   way a quoted instance would be. */
+.callout[data-callout="przyklad"] {
+  --color: var(--marginalia-ink);
+  --bg: transparent;
+  border: 1px solid var(--lightgray);
+  border-left: 1px solid var(--lightgray);
+  padding: 0.1rem 1.1rem;
+
+  .callout-content {
+    font-style: italic;
+  }
+}
+
+/* The formula block keeps its bronze rule but gains the stamped label above,
+   and the expression is pushed away from the edge so the arithmetic sits in
+   its own space rather than against the border. */
+.callout[data-callout="wzor"] {
+  border-left-width: 2px;
+  padding-left: 1.1rem;
+}
+
+/* -------------------------------------------------------------------------
+   Links
+   ------------------------------------------------------------------------- */
+
+/* These rules cross-reference heavily — a paragraph can carry five or six
+   links. Quartz's default gives every internal link a tinted pill
+   (`background-color: var(--highlight)` plus padding and a radius), and at that
+   density the page turns into a run of coloured blocks with prose between them:
+   the reader sees the highlighting before the sentence.
+
+   So the resting state is ink and a hairline rule, which is what a
+   cross-reference looks like in a printed reference. The tint is kept, but
+   spent where it earns its keep — under the pointer, on keyboard focus, and on
+   tag chips, which are objects rather than words in a sentence. */
+article a {
+  color: var(--secondary);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
+
+  &:hover {
+    color: var(--tertiary);
+  }
+}
+
+article a.internal {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+  line-height: inherit;
+
+  /* `from-font` where the face offers a position, so the rule clears the
+     descenders of ą/ę rather than cutting through them. */
+  text-decoration: underline;
+  text-decoration-thickness: from-font;
+  text-decoration-color: color-mix(in srgb, var(--secondary) 45%, transparent);
+  text-underline-offset: 0.18em;
+  transition:
+    background-color 0.15s ease,
+    text-decoration-color 0.15s ease;
+}
+
+/* Bronze on parchment is ~3.2:1 — fine as a hover accent on a link the reader
+   is actively pointing at, but the underline must stay to carry the affordance. */
+article a:hover {
+  text-decoration: underline;
+}
+
+article a.internal:hover,
+article a.internal:focus-visible {
+  background-color: var(--highlight);
+  text-decoration-color: currentColor;
+
+  /* The tint needs to clear the glyphs without shifting them, so it is painted
+     outwards with a shadow rather than with padding, which would reflow the
+     line on hover. */
+  box-shadow:
+    0 0 0 0.12em var(--highlight),
+    0 0.12em 0 0.12em var(--highlight);
+  border-radius: 2px;
+}
+
+article a.internal:focus-visible {
+  outline: 1px solid var(--secondary);
+  outline-offset: 0.14em;
+}
+
+/* Tag chips stay filled: they are objects the reader picks, not words being
+   read through. */
+article a.internal.tag-link,
+.tags a.internal {
+  background-color: var(--highlight);
+  padding: 0.1rem 0.5rem;
+  border-radius: 2px;
+  text-decoration: none;
+  font-family: var(--codeFont);
+  font-size: 0.76em;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  box-shadow: none;
+}
+
+/* -------------------------------------------------------------------------
+   Blockquotes and inline code
+   ------------------------------------------------------------------------- */
+
+article blockquote {
+  border-left: 2px solid var(--gray);
+  padding-left: 1rem;
+  font-style: italic;
+  color: var(--darkgray);
+}
+
+article code {
+  font-family: var(--codeFont);
+  font-size: 0.9em;
+}
+
+/* -------------------------------------------------------------------------
+   Phone layout (375px is the target: Discord's in-app browser)
+   ------------------------------------------------------------------------- */
+
+/* The mobile explorer drawer is absolutely positioned and sized to 100vw, but
+   its containing block sits inside #quartz-body's 16px side padding — so it
+   starts at x=16 and ends at 100vw + 16, giving the whole page a 16px
+   horizontal scroll at 375px. Anchoring it to its containing block instead of
+   the viewport removes the overflow without changing how it looks. */
+@media all and (max-width: 800px) {
+  .explorer-content {
+    left: 0;
+    right: 0;
+    width: auto;
+    max-width: 100%;
+  }
+}
+
+@media all and (max-width: 600px) {
+  /* A phone is the common reading device here — rules get checked mid-turn on
+     Discord — so the page is set tighter than the desktop measure: slightly
+     smaller type, and less air between blocks so more of a rule fits in one
+     screen. 15px rather than the 16px floor the desktop body keeps; below
+     about 14px this face loses its diacritics at a glance, which in Polish is
+     the difference between "łaska" and "laska". */
+  article {
+    font-size: 0.9375rem; /* 15px */
+    line-height: 1.6;
+  }
+
+  .page-title {
+    font-size: 1.6rem;
+  }
+
+  /* Vertical rhythm, pulled in. The desktop values are set for a long column
+     with margins either side; on a phone the same gaps read as gaps. */
+  article {
+    p,
+    ul,
+    ol {
+      margin-bottom: 0.85em;
+    }
+
+    h2 {
+      margin-top: 1.7em;
+      margin-bottom: 0.5em;
+    }
+
+    h3 {
+      margin-top: 1.3em;
+      margin-bottom: 0.4em;
+    }
+
+    blockquote {
+      margin-top: 1em;
+      margin-bottom: 1em;
+    }
+  }
+
+  /* Margin notes have no margin to sit in on a phone; they stack above the
+     content, so the left hairline would read as a stray vertical line. */
+  .right.sidebar {
+    .toc,
+    .backlinks {
+      border-left: none;
+      border-top: 1px solid var(--lightgray);
+      padding-left: 0;
+      padding-top: 0.75rem;
+    }
+  }
+
+  /* Tables are the reason this breakpoint exists at all. `Rozkazy bitwy
+     lądowej` is four columns wide and used to need 565px inside a 343px
+     column — 222px of side-scrolling on a rule that is read by scanning
+     across the row, which is exactly what horizontal scrolling destroys.
+
+     Almost none of that was the type. It was `white-space: nowrap` on `th`:
+     "STRATY ZADANE WROGOWI", uppercase and letter-spaced, held its column open
+     at 236px on its own. Letting headers wrap gives the whole table a
+     min-content width of 146px, well inside the column, so the rest of this
+     block is about comfort rather than fit. */
+  /* Down from 0.9rem, but the fit no longer depends on it: with the cell
+     min-width gone the table wraps to whatever column it is given, and it
+     measured zero overflow at every size from 0.8rem to 0.95rem even on a
+     320px screen. This value is chosen for legibility of a dense table on a
+     phone, so it can be moved freely without putting the layout back at risk. */
+  article table {
+    font-size: 0.85rem;
+  }
+
+  /* Quartz's own `.table-container > table` sets `padding: 1.5rem` and puts
+     `min-width: 75px` on every cell. Together those are what actually pushed
+     this table off a phone screen: 48px of the 343px column went to padding
+     the reader never sees, and four cells at a 75px floor could not share what
+     was left however the text wrapped. Both are sized for a desktop layout.
+
+     The selector has to be at least as specific as the upstream one — a bare
+     `article table` loses to `.table-container > table` and the padding stays. */
+  article .table-container > table {
+    margin: 1em 0;
+    padding: 0;
+  }
+
+  article .table-container > table th,
+  article .table-container > table td {
+    min-width: 0;
+    padding: 0.3em 0.4em;
+    /* Polish rule names are long — "Utrzymanie", "Niesamowitości" — and a word
+       that cannot break is a column that cannot shrink. */
+    overflow-wrap: anywhere;
+  }
+
+  article thead th {
+    white-space: normal;
+    /* Tracking on uppercase costs real width per character, and a wrapped
+       two-line header does not need it to read as a label. */
+    letter-spacing: 0.02em;
+    font-size: 0.82rem;
+  }
+
+  /* Inline stat icons set their own height in the wikilink; on a phone they
+     should follow the smaller type rather than tower over it. */
+  article table img {
+    height: 0.95em;
+    width: auto;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Section index as an archival catalogue
+
+   A section listing was a single narrow column of bare links using about a
+   third of the page. It is a catalogue of the section's contents, so it is set
+   as one: two columns of entries, each carrying its article number, title,
+   one-line description and tags, separated by ruled lines rather than cards.
+
+   Ruled rather than boxed on purpose — a card grid is a modern shop listing,
+   and these are register entries.
+   ------------------------------------------------------------------------- */
+
+.page-listing ul.section-ul {
+  counter-reset: pozycja;
+  margin-top: 1.5rem;
+}
+
+@media all and (min-width: 900px) {
+  .page-listing ul.section-ul {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 3rem;
+
+    /* The rule between the columns is the gutter of the register, drawn on the
+       list rather than on the entries so it runs the full height instead of
+       breaking at every row. */
+    background-image: linear-gradient(var(--lightgray), var(--lightgray));
+    background-size: 1px calc(100% - 1.2rem);
+    background-position: 50% 0;
+    background-repeat: no-repeat;
+  }
+}
+
+.page-listing li.section-li {
+  margin: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--lightgray) 60%, transparent);
+
+  > .section {
+    /* Quartz's three-column grid (date / title / tags) is for a feed. A
+       catalogue entry stacks: number and title, then the description, then the
+       tags. */
+    display: block;
+    padding: 0.85rem 0 0.95rem;
+  }
+
+  /* The article number. A counter rather than markup — the sequence belongs to
+     the page, not to the file. */
+  .desc > h3 {
+    counter-increment: pozycja;
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin: 0;
+    font-family: var(--headerFont);
+    font-size: 1.18rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+
+    /* Roman, as a register of laws numbers its articles. Right-aligned in a
+       fixed column so the titles start on one line however long the numeral
+       gets — XXIII is three times the width of I. */
+    &::before {
+      content: counter(pozycja, upper-roman);
+      flex: 0 0 2.6rem;
+      text-align: right;
+      font-family: var(--codeFont);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      /* Full strength: these are small text, and every accent only clears
+         4.5:1 undiluted — see `npm run check-contrast`. */
+      color: var(--sekcja-akcent);
+      text-shadow:
+        0 1px 0 var(--stamp-relief),
+        0 -1px 0 var(--stamp-shadow);
+    }
+  }
+
+  .desc > h3 > a {
+    color: var(--dark);
+    text-decoration: none;
+    background-color: transparent;
+
+    &:hover {
+      color: var(--secondary);
+      text-decoration: underline;
+      text-underline-offset: 0.16em;
+    }
+  }
+
+  .desc-line {
+    margin: 0.25rem 0 0 3.2rem;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    color: var(--darkgray);
+    max-width: 34em;
+  }
+
+  ul.tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    list-style: none;
+    margin: 0.5rem 0 0 3.2rem;
+    padding: 0;
+
+    /* An entry with no tags must not leave a gap where the row of chips would
+       have been. */
+    &:empty {
+      display: none;
+    }
+  }
+}
+
+/* The listing page keeps the full column width — the measure cap is for
+   running prose, and a two-column register needs the room. */
+.center > article:has(.page-listing) {
+  max-width: none;
+}
+
+/* Quartz rules off the footer with a full-width `<hr>`. On a running page that
+   is one rule doing one job, but a catalogue already ends in a stack of entry
+   hairlines, and a wider rule directly under them reads as a stray line rather
+   than as a division. The entry rules are the register; this one is dropped
+   here and kept everywhere else. */
+.page:has(.page-listing) > #quartz-body > .center > hr {
+  display: none;
+}
+
+/* -------------------------------------------------------------------------
+   Reading rail — the right margin as an orientation column
+
+   The margin already held a table of contents; this turns it into something
+   that tracks where the reader is. Three additions:
+
+     - the whole column stays put while the article scrolls
+     - the section under the reader is marked, not merely less faded
+     - a hairline runs down the contents with a filled portion showing how far
+       through the page the reader is
+
+   The rule is set on the list rather than as a separate element so it cannot
+   drift out of alignment with the entries it belongs to.
+   ------------------------------------------------------------------------- */
+
+@media all and (min-width: 800px) {
+  .page > #quartz-body > .right.sidebar {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    max-height: 100vh;
+    overflow-y: auto;
+    /* No visible scrollbar track in a 14rem margin — it reads as a second
+       column edge. The column still scrolls when the contents are long. */
+    scrollbar-width: none;
+    padding-top: 1.6rem;
+
+    &::-webkit-scrollbar {
+      width: 0;
+    }
+  }
+}
+
+.right.sidebar .toc ul.toc-content {
+  position: relative;
+  padding-left: 0.9rem;
+
+  /* The rail, and the progress fill over it. --czytanie is set by the reading
+     rail's script; with no script it stays 0 and the rail is simply a hairline,
+     which is a correct resting state rather than a broken one. */
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: 1px;
+    top: 0.2em;
+    bottom: 0.2em;
+  }
+
+  &::before {
+    background-color: var(--lightgray);
+  }
+
+  &::after {
+    bottom: auto;
+    height: calc((100% - 0.4em) * var(--czytanie, 0));
+    background-color: var(--secondary);
+    opacity: 0.55;
+    transition: height 0.12s linear;
+  }
+}
+
+/* The current section.
+
+   Quartz marks it by fading everything else — .in-view goes from opacity 0.35
+   to 0.75. That is the wrong lever twice over: 0.35 puts the marginalia ink at
+   1.9:1 on parchment, well under the 4.5:1 these links owe as navigation, and
+   a difference in fade is hard to spot in a list of ten anyway.
+
+   So inactive entries stay legible (0.9 is the lowest that still clears 4.5:1
+   in both modes — measured, see the table in the commit), and the active one is
+   marked positively instead: full heading ink plus a tick on the rail. */
+.right.sidebar .toc ul.toc-content > li > a {
+  position: relative;
+  opacity: 0.9;
+}
+
+.right.sidebar .toc ul.toc-content > li > a.in-view {
+  opacity: 1;
+  color: var(--dark);
+  font-style: normal;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: -0.9rem;
+    top: 0.35em;
+    width: 3px;
+    height: 0.85em;
+    background-color: var(--secondary);
+    border-radius: 0;
+  }
+}
+
+/* "Cytowane przez" collapsed into a disclosure (see the "Collapsible
+   backlinks" patch). The marker is replaced with a rotating chevron drawn in
+   the border, matching the table of contents' own fold control. */
+.right.sidebar details.backlinks {
+  border-top: 1px solid var(--lightgray);
+  padding-top: 0.9rem;
+  /* The separation from the panel above is the sidebar's flex row-gap. A margin
+     here would add to it rather than set it — between them and the rail's own
+     former margin, the space above this rule had grown to 80px. */
+  margin-top: 0;
+
+  > summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    &::after {
+      content: "";
+      flex: 0 0 auto;
+      width: 0.42rem;
+      height: 0.42rem;
+      border-right: 1px solid var(--marginalia-ink);
+      border-bottom: 1px solid var(--marginalia-ink);
+      transform: rotate(-45deg) translate(-0.1em, 0);
+      transition: transform 0.2s ease;
+    }
+
+    h3 {
+      margin: 0;
+    }
+  }
+
+  &[open] > summary::after {
+    transform: rotate(45deg) translate(-0.05em, -0.05em);
+  }
+
+  > summary:focus-visible {
+    outline: 1px solid var(--secondary);
+    outline-offset: 3px;
+  }
+
+  ul.overflow {
+    margin-top: 0.7rem;
+  }
+}
+
+/* =========================================================================
+   Domains of knowledge — one restrained identity per section
+
+   The seven sections are branches of the Citadel's learning, not houses, so
+   the vocabulary is deliberately institutional: a line-drawn emblem and a
+   single muted accent, no crests and no faction colour anywhere.
+
+   Scoping needs no new markup. The masthead component already marks the
+   current section with `aria-current="page"`, so `:has()` reads it off the nav
+   and the whole page inherits that section's tokens. Pages outside a section —
+   the home page, the changelog, tag pages — simply fall through to the
+   defaults, which is the correct result rather than a gap.
+
+   Accents stay off body links on purpose. A wikilink is rust everywhere in the
+   site; making it ochre in Gospodarka and slate in Dyplomacja would mean the
+   reader has to re-learn what a link looks like on every section, and would
+   put seven more colours through the 4.5:1 gate for no gain. The accent marks
+   the *place*: emblem, section rules, catalogue numerals, active nav.
+   ========================================================================= */
+
+:root {
+  /* Fallback identity for pages that belong to no section. */
+  --sekcja-akcent: var(--marginalia-ink);
+  --sekcja-emblemat: var(--chain-mark);
+}
+
+/* Emblems. Line art at a single stroke weight, drawn on a 24×24 field and used
+   as masks so each one takes the section accent without a second asset per
+   theme. Kept simple enough to survive being rendered at 14px. */
+:root {
+  /* Klucz — the rules are what open the rest of the game. */
+  --emblemat-podstawy: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='3.6'/%3E%3Cpath d='M9.6 9.6 20 20M16 16l-2.4 2.4M18 18l-2.4 2.4'/%3E%3C/svg%3E");
+  /* Korona — the seat the court is arranged around. */
+  --emblemat-dwor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'%3E%3Cpath d='M3 17V7l4.5 4L12 5l4.5 6L21 7v10Z'/%3E%3Cpath d='M3 20h18'/%3E%3C/svg%3E");
+  /* Monety — a stack and one coin beside it, the way they are counted out. */
+  --emblemat-gospodarka: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cellipse cx='9.4' cy='9' rx='5.4' ry='2.5'/%3E%3Cpath d='M4 9v5.6a5.4 2.5 0 0 0 10.8 0V9M4 11.8a5.4 2.5 0 0 0 10.8 0'/%3E%3Ccircle cx='17.6' cy='15.4' r='4'/%3E%3C/svg%3E");
+  /* Zwój — a pact is a document before it is anything else. */
+  --emblemat-dyplomacja: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 17V5a2 2 0 0 0-2-2H4M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3'/%3E%3C/svg%3E");
+  /* Sztylet — the blade nobody carries openly. Drawn upright and rotated, so
+     the guard, grip and pommel stay square to the blade. */
+  --emblemat-intrygi: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg transform='rotate(40 12 12)'%3E%3Cpath d='M9.4 13v4.2L12 21.8l2.6-4.6V13M6.4 13h11.2M10.5 13V8.4h3V13'/%3E%3Ccircle cx='12' cy='6.6' r='1.7'/%3E%3C/g%3E%3C/svg%3E");
+  /* Skrzyżowane miecze — each one carries a crossguard and a pommel cap, so
+     the pair reads as swords rather than as a saltire. */
+  --emblemat-militaria: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 4 19.2 19.2M13.9 17.5 17.5 13.9M18 20.4 20.4 18M20 4 4.8 19.2M10.1 17.5 6.5 13.9M6 20.4 3.6 18'/%3E%3C/svg%3E");
+  /* Siedmioramienna gwiazda Wiary w Siedmiu — heptagram {7/3}, jednym ciągłym
+     pociągnięciem: siedem wierzchołków na okręgu, każdy połączony z trzecim
+     następnym. Nie jest to zwykła gwiazda o siedmiu ramionach, tylko ta sama
+     figura co na wisiorach septonów.
+
+     `stroke-miterlimit` musi tu być podniesiony. Wierzchołek {7/3} ma 25,7°,
+     co daje stosunek ostrza 4,49 — powyżej domyślnego limitu 4, więc przy
+     domyślnym ustawieniu przeglądarka ścięłaby wszystkie siedem czubków na
+     płasko. Wcześniejszy emblemat wbrew komentarzowi rysował pospolitą
+     pięcioramienną gwiazdę w kole. */
+  --emblemat-niesamowitosci: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-miterlimit='10'%3E%3Cpath d='M12 2.5 16.12 20.56 4.57 6.08 21.26 14.11 2.74 14.11 19.43 6.08 7.88 20.56Z'/%3E%3C/svg%3E");
+}
+
+/* The accents. Every one is a desaturated earth or stone tone, chosen to sit
+   at the same visual weight as the others so no section shouts louder than the
+   rest. Dark-mode values are lifted, not merely inverted — the light-mode
+   tones vanish against the vault ground. */
+.page:has(.site-nav-link[href$="/podstawy/"][aria-current="page"]) {
+  --sekcja-akcent: var(--akcent-podstawy); /* kamień */
+  --sekcja-emblemat: var(--emblemat-podstawy);
+}
+.page:has(.site-nav-link[href$="/dwor/"][aria-current="page"]) {
+  --sekcja-akcent: var(--akcent-dwor); /* palona sjena */
+  --sekcja-emblemat: var(--emblemat-dwor);
+}
+.page:has(.site-nav-link[href$="/gospodarka/"][aria-current="page"]) {
+  --sekcja-akcent: var(--akcent-gospodarka); /* ochra */
+  --sekcja-emblemat: var(--emblemat-gospodarka);
+}
+.page:has(.site-nav-link[href$="/dyplomacja/"][aria-current="page"]) {
+  --sekcja-akcent: var(--akcent-dyplomacja); /* łupek */
+  --sekcja-emblemat: var(--emblemat-dyplomacja);
+}
+.page:has(.site-nav-link[href$="/intrygi/"][aria-current="page"]) {
+  --sekcja-akcent: var(--akcent-intrygi); /* cień */
+  --sekcja-emblemat: var(--emblemat-intrygi);
+}
+.page:has(.site-nav-link[href$="/militaria/"][aria-current="page"]) {
+  --sekcja-akcent: var(--akcent-militaria); /* burgund */
+  --sekcja-emblemat: var(--emblemat-militaria);
+}
+.page:has(.site-nav-link[href$="/niesamowitosci/"][aria-current="page"]) {
+  --sekcja-akcent: var(--akcent-niesamowitosci); /* ciemny mech */
+  --sekcja-emblemat: var(--emblemat-niesamowitosci);
+}
+
+:root[saved-theme="dark"] {
+  .page:has(.site-nav-link[href$="/podstawy/"][aria-current="page"]) {
+    --sekcja-akcent: var(--akcent-podstawy);
+  }
+  .page:has(.site-nav-link[href$="/dwor/"][aria-current="page"]) {
+    --sekcja-akcent: var(--akcent-dwor);
+  }
+  .page:has(.site-nav-link[href$="/gospodarka/"][aria-current="page"]) {
+    --sekcja-akcent: var(--akcent-gospodarka);
+  }
+  .page:has(.site-nav-link[href$="/dyplomacja/"][aria-current="page"]) {
+    --sekcja-akcent: var(--akcent-dyplomacja);
+  }
+  .page:has(.site-nav-link[href$="/intrygi/"][aria-current="page"]) {
+    --sekcja-akcent: var(--akcent-intrygi);
+  }
+  .page:has(.site-nav-link[href$="/militaria/"][aria-current="page"]) {
+    --sekcja-akcent: var(--akcent-militaria);
+  }
+  .page:has(.site-nav-link[href$="/niesamowitosci/"][aria-current="page"]) {
+    --sekcja-akcent: var(--akcent-niesamowitosci);
+  }
+}
+
+/* The emblem replaces the chain in the rubric line: the chain marks the
+   archive as a whole, the emblem marks which shelf of it you are standing at.
+   Sections without one keep the chain. */
+.breadcrumb-container::before {
+  background-color: var(--sekcja-akcent);
+  -webkit-mask-image: var(--sekcja-emblemat);
+  mask-image: var(--sekcja-emblemat);
+  opacity: 0.75;
+}
+
+/* A section emblem is square; the chain is a wide strip. */
+.page:not(:has(.site-nav-link[aria-current="page"])) .breadcrumb-container::before {
+  width: 2.1rem;
+}
+.page:has(.site-nav-link[aria-current="page"]) .breadcrumb-container::before {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+/* Active navigation takes the accent it points at. */
+.site-nav-link[aria-current="page"] {
+  color: var(--sekcja-akcent);
+  border-bottom-color: var(--sekcja-akcent);
+}
+
+/* =========================================================================
+   The archival document frame
+
+   The reading area stops being "the page" and becomes a leaf lying on it: a
+   warmer ivory stock, ruled off from the surround with a hairline in dark
+   beige. The surround keeps the parchment tone, so the two read as document
+   and desk rather than as two panels.
+
+   The grain sits under both, at the strength set at the top of this file —
+   almost invisible behind body text, which is the point. This is an old legal
+   manuscript, not a treasure map.
+   ========================================================================= */
+
+:root {
+  --karta: #f6f1e6; /* ivory leaf, solid */
+  --karta-linia: #c7b48f; /* dark beige rule */
+
+  /* The leaf's own fill is held slightly off full, so the crows behind the
+     page show faintly through it — the plate reads as a watermark under the
+     sheet rather than as something the text is printed over.
+     0.62 in light mode: the tightest text pair on the leaf (marginalia) still
+     measures 6.39:1 there, so this is nowhere near the floor. */
+  --karta-tlo: rgb(246 241 230 / 62%);
+}
+
+:root[saved-theme="dark"] {
+  /* The leaf lifts off the vault ground rather than glowing. */
+  --karta: #1c1815;
+  --karta-linia: #4a4032;
+
+  /* The leaf takes the page tone itself here, not the lighter `--karta`.
+     On the dark ground those two are only five RGB steps apart, but that was
+     enough to draw the reading column as a paler rectangle over the crows —
+     a visible seam down both edges where the veiled leaf met the bare page.
+     Painting 86% of the page tone over the page tone is exactly the page tone,
+     so wherever no bird passes underneath the two are identical.
+
+     The 86% is kept rather than dropped to nothing: it is what damps the crows
+     under the text. Removing the veil entirely puts the rubric red at 4.03:1
+     against a crow-lightened ground, under the 4.5 floor. At 86% it measures
+     4.74:1. Light mode keeps `--karta` — there the ivory leaf on parchment is
+     the intended look, and its contrast has room to spare. */
+  --karta-tlo: rgb(22 19 15 / 86%);
+}
+
+/* Reader mode.
+   Upstream fades both margins to zero, which on this layout removes the table
+   of contents and the neighbouring-rule links — navigation, not decoration.
+   Here it does the one thing the page background asks for instead: the leaf
+   goes fully opaque and the crows disappear from under the text. The margins
+   keep their content. Unlayered, so it wins over the plugin's own rule in
+   `@layer quartz-base` without needing `!important`. */
+:root[reader-mode="on"] {
+  --karta-tlo: var(--karta);
+}
+
+/* …and in dark mode it goes opaque in the page tone, for the same reason the
+   veiled leaf does: `--karta` would put the seam straight back. */
+:root[saved-theme="dark"][reader-mode="on"] {
+  --karta-tlo: var(--light);
+}
+
+:root[reader-mode="on"] .sidebar.left,
+:root[reader-mode="on"] .sidebar.right {
+  opacity: 1;
+}
+
+@media all and (min-width: 800px) {
+  .page > #quartz-body > .center {
+    /* The grid gives this column a fixed track. Quartz leaves `.center` as
+       content-box, so padding and borders would be added *outside* that track:
+       the leaf grew 85px wider than its column, spilled through the gutter and
+       slid under the margin column, where the margin's own hairline then cut
+       straight through the reading rail. Border-box keeps the frame inside the
+       track it was given. */
+    box-sizing: border-box;
+    background-color: var(--karta-tlo);
+    border-left: 1px solid var(--karta-linia);
+    border-right: 1px solid var(--karta-linia);
+    padding: 2.2rem 2.6rem 2.6rem;
+
+    /* The leaf runs to the foot of the column so a short page does not end in
+       a floating rectangle halfway down the screen. */
+    min-height: 60vh;
+  }
+
+  /* Head and foot rules are drawn separately and inset, so the frame reads as
+     ruled margins rather than as a box with four equal sides. */
+  .page > #quartz-body > .center::before,
+  .page > #quartz-body > .center::after {
+    content: "";
+    display: block;
+    height: 1px;
+    background-color: var(--karta-linia);
+  }
+
+  .page > #quartz-body > .center::before {
+    margin: -1.1rem 0 1.9rem;
+  }
+
+  .page > #quartz-body > .center::after {
+    margin: 2.4rem 0 -1.3rem;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Heading ornament
+
+   A single chain link set in the left margin of every section heading — the
+   scribe's mark that a new division begins. Drawn from the section emblem's
+   own accent, so the ornament belongs to the domain the page sits in.
+
+   One mark, one weight, no flourishes: the rubric red and the hairline are
+   still doing the work.
+   ------------------------------------------------------------------------- */
+
+article h2 {
+  position: relative;
+}
+
+@media all and (min-width: 1100px) {
+  article h2::before {
+    content: "";
+    position: absolute;
+    left: -1.5rem;
+    top: 0.42em;
+    width: 0.62rem;
+    height: 0.62rem;
+    background-color: var(--sekcja-akcent);
+    opacity: 0.65;
+    -webkit-mask-image: var(--ogniwo);
+    mask-image: var(--ogniwo);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+  }
+}
+
+:root {
+  /* A single link of the chain. */
+  --ogniwo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3'%3E%3Cellipse cx='12' cy='12' rx='10' ry='7'/%3E%3C/svg%3E");
+}
+
+/* =========================================================================
+   Rule components, second pass
+
+   The four forms already differ at the edge. This gives the two that carry the
+   most weight — the formula and the caution — a form of their own, and turns
+   the procedure's step numbers into something a reader can find while
+   scanning.
+   ========================================================================= */
+
+/* Wzór — a copied theorem. Inset from the measure and bounded by a narrow
+   double rule top and bottom: the arithmetic is lifted out of the argument
+   and set down on its own. */
+.callout[data-callout="wzor"] {
+  border-left: none;
+  border-top: 3px double var(--tertiary);
+  border-bottom: 3px double var(--tertiary);
+  margin-left: 1.4rem;
+  margin-right: 1.4rem;
+  padding: 0.3rem 0 0.4rem;
+}
+
+/* Uwaga — a mark pressed into the margin rather than a fenced quotation. The
+   seal is a stamped `!` in a ring, sitting outside the text column where a
+   corrector's mark would go, and the block itself carries no border at all. */
+.callout[data-callout="uwaga"] {
+  --bg: transparent;
+  border-left: none;
+  position: relative;
+  padding-left: 0;
+
+  > .callout-title {
+    padding-left: 2.3rem;
+  }
+
+  > .callout-content {
+    padding-left: 2.3rem;
+  }
+
+  &::before {
+    content: "!";
+    position: absolute;
+    left: 0;
+    top: 0.55rem;
+    width: 1.55rem;
+    height: 1.55rem;
+    border: 1px solid var(--secondary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--codeFont);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--secondary);
+    background-color: var(--highlight);
+    text-shadow:
+      0 1px 0 var(--stamp-relief),
+      0 -1px 0 var(--stamp-shadow);
+  }
+}
+
+/* Procedura — large, subdued Roman numerals in the left margin. A step is a
+   place you are at, so the numeral has to be findable when the eye comes back
+   to the page after doing what the step says. */
+.callout[data-callout="procedura"] .callout-content ol {
+  padding-left: 3.2rem;
+
+  > li {
+    margin-bottom: 0.5em;
+
+    &::before {
+      content: counter(krok, upper-roman) ".";
+      left: -3.2rem;
+      width: 2.4rem;
+      font-size: 1rem;
+      letter-spacing: 0.04em;
+      color: var(--sekcja-akcent);
+    }
+  }
+}
+
+/* Costs. A price is one unit of meaning — the figure and the resource it is
+   counted in — so the two are held together and never allowed to break across
+   a line, in a table cell or in running prose. */
+article td,
+article p,
+article li {
+  img[src*="/ikonki/"] {
+    vertical-align: text-bottom;
+  }
+}
+
+article td[align="right"],
+article td[style*="text-align:right"],
+article td[style*="text-align: right"] {
+  /* The figure and its icon travel together; the cell is already nowrap, this
+     evens out the gap so a column of costs lines up on the icon as well as on
+     the digits. */
+  word-spacing: 0.12em;
+}
+
+/* =========================================================================
+   Fluff — the introductions, as documents the Citadel kept
+
+   These seven pages are letters, not law: written in the first person, signed
+   with an office. They get the manuscript treatment the rules deliberately do
+   not, and the contrast is the point — the introductions look preserved, the
+   rules look enacted.
+
+   Scoped by the `fluff` tag chip already in the DOM, so no page needs to opt
+   in twice.
+   ========================================================================= */
+
+.page:has(a.tag-link[href$="/fluff"]) {
+  /* The letters are the eighth domain: correspondence the Citadel kept. They
+     sit outside the masthead, so they never pick up a section accent — this
+     gives them their own, a sepia that belongs to none of the seven and reads
+     as aged ink. 7.03:1 light, 7.27:1 dark. */
+  --sekcja-akcent: #6a4b2a;
+
+  /* A larger initial: this is the opening of a letter, not of a clause. */
+  article p.inicjal::first-letter {
+    font-size: 4.4em;
+    line-height: 0.78;
+    padding: 0.04em 0.11em 0 0;
+    color: var(--sekcja-akcent);
+  }
+
+  /* The portrait is the first paragraph and holds nothing but the image.
+     Floated into the margin and framed the way a plate would be tipped into a
+     bound volume: a hairline, a mount of ivory, and no shadow. */
+  article .markdown-preview-view > p:first-child:has(> img:only-child) {
+    float: right;
+    width: 12rem;
+    margin: 0.4rem 0 1.2rem 2rem;
+    padding: 0.55rem;
+    background-color: var(--karta);
+    border: 1px solid var(--karta-linia);
+    outline: 1px solid var(--karta-linia);
+    outline-offset: 3px;
+
+    img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+  }
+
+  /* The signature block: an office and a name, set apart from the letter by a
+     rule the width of the attribution rather than of the column. */
+  article .markdown-preview-view > p:last-child:has(br) {
+    clear: both;
+    margin-top: 2.2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--karta-linia);
+    max-width: 18rem;
+    font-family: var(--headerFont);
+    font-size: 1.02rem;
+    line-height: 1.4;
+    color: var(--marginalia-ink);
+
+    em {
+      display: block;
+      font-style: normal;
+      font-size: 1.35rem;
+      color: var(--dark);
+      letter-spacing: 0.01em;
+    }
+  }
+}
+
+@media all and (max-width: 700px) {
+  /* A 12rem plate floated beside a 343px column leaves a gutter of text. */
+  .page:has(a.tag-link[href$="/fluff"])
+    article
+    .markdown-preview-view
+    > p:first-child:has(> img:only-child) {
+    float: none;
+    width: 100%;
+    margin: 0 0 1.4rem;
+  }
+}
+
+/* =========================================================================
+   Popovers — the slip laid over the leaf
+
+   `enablePopovers` is on, and following a cross-reference without leaving the
+   rule you are reading is the main motion on a rules wiki, so this is the most
+   frequently seen surface on the site. Upstream gives it a 5px radius and a
+   36px drop shadow, which is the one modern-tooltip idiom the rest of the
+   theme spent 2000 lines avoiding.
+
+   Treated as a slip of paper laid on the leaf: square, one hairline, the same
+   grain, and a shadow shallow enough to read as contact rather than as
+   elevation.
+   ========================================================================= */
+
+.popover > .popover-inner {
+  border-radius: 0;
+  border: 1px solid var(--karta-linia);
+  background-color: var(--karta);
+  box-shadow: 0 2px 10px var(--stamp-shadow);
+  padding: 1rem 1.15rem 1.15rem;
+
+  /* The grain, at the strength the page uses. `::before` is free here — the
+     inner box has no pseudo-element of its own. */
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: var(--paper-grain);
+    opacity: var(--paper-grain-opacity);
+    mix-blend-mode: multiply;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* A drop cap is sized for a 45rem column. In a 30rem box 3.2em of Cormorant
+     is most of the preview, so the ornament is suppressed and the paragraph
+     opens flush like any other. */
+  .inicjal::first-letter {
+    font-size: inherit;
+    line-height: inherit;
+    float: none;
+    padding: 0;
+    margin: 0;
+    color: inherit;
+    font-family: inherit;
+  }
+
+  /* Chrome the reader did not ask for at this size: the rubric trail, the
+     modified date, the topic chips and the table of contents. The title stays
+     — it is what tells you which rule you are looking at. */
+  .breadcrumb-container,
+  .content-meta,
+  ul.tags,
+  .toc,
+  .backlinks {
+    display: none;
+  }
+}
+
+:root[saved-theme="dark"] .popover > .popover-inner::before {
+  mix-blend-mode: screen;
+}
+
+/* =========================================================================
+   The search panel — a catalogue, not a shop listing
+
+   The masthead button was themed; the panel behind it was not, so it opened
+   as rounded cards over a 50px shadow. Section indexes rejected exactly that
+   idiom, and the vocabulary built for them — ruled rows, header-face title,
+   marginalia excerpt, an emblem marking the shelf — applies here unchanged.
+   ========================================================================= */
+
+.search-container > .search-space {
+  > :not(.ghost-text):not(.tag-suggestions) {
+    border-radius: 0;
+    background: var(--karta);
+    box-shadow: 0 6px 26px var(--stamp-shadow);
+    border-color: var(--karta-linia);
+  }
+
+  > input {
+    font-family: var(--headerFont);
+    font-size: 1.35em;
+    letter-spacing: 0.01em;
+    color: var(--dark);
+    border-color: var(--karta-linia);
+    padding: 0.6em 0.8em;
+  }
+
+  > .search-layout {
+    border-color: var(--karta-linia);
+
+    > div {
+      border-radius: 0;
+    }
+
+    &[data-preview] > div:first-child {
+      border-right-color: var(--karta-linia);
+    }
+
+    /* The plugin default is `--tertiary` at 60%, which is the bronze used for
+       hover states. A found word is a rubricator's mark, so it takes the
+       rubric wash instead. */
+    .highlight {
+      background: var(--highlight);
+      border-radius: 0;
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--secondary) 22%, transparent);
+    }
+  }
+}
+
+.search-container .result-card {
+  border-bottom: 1px solid var(--karta-linia);
+  border-radius: 0;
+  padding: 0.85em 1em 0.9em 2.6em;
+  position: relative;
+  transition: background 0.15s ease;
+
+  > h3 {
+    font-family: var(--headerFont);
+    font-weight: 600;
+    font-size: 1.16em;
+    letter-spacing: 0.01em;
+    color: var(--secondary);
+  }
+
+  /* The excerpt is marginalia: it is scanned, not read. */
+  > p {
+    color: var(--marginalia-ink);
+    font-size: 0.88em;
+    line-height: 1.45;
+  }
+
+  /* Topic chips lose the pill. */
+  > ul > li > p {
+    border-radius: 0;
+    background-color: transparent;
+    border-bottom: 1px solid color-mix(in srgb, var(--secondary) 35%, transparent);
+    font-weight: 600;
+    font-size: 0.76rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0 0 0.05rem;
+  }
+
+  &:hover,
+  &.focus,
+  &:focus {
+    background: color-mix(in srgb, var(--lightgray) 40%, transparent);
+  }
+
+  /* The row marker. The card's `id` is the page slug, so the section it came
+     from can be read straight off it — the one place on the site where all
+     seven emblems can appear at once. */
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0.95em;
+    top: 1.35em;
+    width: 0.85rem;
+    height: 0.85rem;
+    background-color: var(--sekcja-akcent, var(--marginalia-ink));
+    -webkit-mask-image: var(--sekcja-emblemat, var(--chain-mark));
+    mask-image: var(--sekcja-emblemat, var(--chain-mark));
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    opacity: 0.7;
+  }
+
+  /* A slug-prefixed row takes its section's emblem and accent. `no-match` has
+     no id and keeps the chain. */
+  &[id^="podstawy/"] {
+    --sekcja-emblemat: var(--emblemat-podstawy);
+    --sekcja-akcent: var(--akcent-podstawy);
+  }
+  &[id^="dwor/"] {
+    --sekcja-emblemat: var(--emblemat-dwor);
+    --sekcja-akcent: var(--akcent-dwor);
+  }
+  &[id^="gospodarka/"] {
+    --sekcja-emblemat: var(--emblemat-gospodarka);
+    --sekcja-akcent: var(--akcent-gospodarka);
+  }
+  &[id^="dyplomacja/"] {
+    --sekcja-emblemat: var(--emblemat-dyplomacja);
+    --sekcja-akcent: var(--akcent-dyplomacja);
+  }
+  &[id^="intrygi/"] {
+    --sekcja-emblemat: var(--emblemat-intrygi);
+    --sekcja-akcent: var(--akcent-intrygi);
+  }
+  &[id^="militaria/"] {
+    --sekcja-emblemat: var(--emblemat-militaria);
+    --sekcja-akcent: var(--akcent-militaria);
+  }
+  &[id^="niesamowitosci/"] {
+    --sekcja-emblemat: var(--emblemat-niesamowitosci);
+    --sekcja-akcent: var(--akcent-niesamowitosci);
+  }
+
+  /* A chain is a wide strip, not a square. */
+  &.no-match::before {
+    width: 1.9rem;
+  }
+}
+
+/* The preview column is the rule itself, so it keeps the leaf and loses the
+   ornament that only makes sense at full column width. */
+.search-container .preview-container {
+  background: var(--karta);
+
+  .inicjal::first-letter {
+    font-size: inherit;
+    line-height: inherit;
+    float: none;
+    padding: 0;
+    color: inherit;
+    font-family: inherit;
+  }
+
+  .breadcrumb-container,
+  .content-meta,
+  .toc,
+  .backlinks {
+    display: none;
+  }
+}
+
+/* =========================================================================
+   Typographic set
+
+   Four small declarations, each following a distinction the theme already
+   makes elsewhere.
+   ========================================================================= */
+
+/* Old-style figures in running prose. The stat tables and the formula blocks
+   already take `tnum` — lining tabular figures, so a column of costs aligns.
+   Prose wants the opposite: Spectral's old-style figures have ascenders and
+   descenders and sit in the line rather than standing above it, which is the
+   distinction a printed reference makes between a number you read and a
+   number you compare. Scoped to prose so the tables keep their lining set. */
+article p,
+article li,
+article blockquote {
+  font-variant-numeric: oldstyle-nums proportional-nums;
+  font-feature-settings: "onum" 1;
+}
+
+/* …except inside a formula, which is arithmetic set in the mono face and has
+   to keep its tabular lining figures so operands line up. The rule above
+   targets the paragraph directly, so inheritance from `.callout-content` is
+   not enough to hold it — the exception has to name the same elements. */
+.callout[data-callout="wzor"] .callout-content,
+.callout[data-callout="wzor"] .callout-content p,
+.callout[data-callout="wzor"] .callout-content li {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Headings balance rather than fill. Upstream sets `text-wrap: pretty` on
+   body copy, which is right for paragraphs and wrong for a two-line Polish
+   heading in Cormorant: a one-word second line is conspicuous precisely
+   because the h2 hairline underneath draws the eye straight to it. */
+article h1,
+article h2,
+article h3,
+article h4,
+.article-title,
+.callout-title-inner {
+  text-wrap: balance;
+}
+
+/* Hyphenation, phone layout only.
+   `Niesamowitości`, `Błogosławieństwa` and `zapotrzebowanie` are longer than a
+   narrow table cell or the margin column, and an unbreakable word there forces
+   the whole page to scroll sideways. Browsers only load Polish patterns when
+   the language is declared — `locale: pl-PL` in the config emits
+   `<html lang="pl-PL">`, which is what makes this work rather than break
+   words at arbitrary points. */
+@media all and (max-width: 600px) {
+  article p,
+  article li,
+  article td,
+  article th,
+  .toc-content a,
+  .backlinks a {
+    hyphens: auto;
+    -webkit-hyphens: auto;
+    hyphenate-limit-chars: 8 4 3;
+  }
+}
+
+/* =========================================================================
+   Accessibility fallbacks
+   ========================================================================= */
+
+/* Windows High Contrast flattens `background-color`, and every ornament on
+   this site is a `mask-image` tinted by exactly that: the section emblems, the
+   chain mark in the rubric line, the crows watermark, the search row markers.
+   In forced colours they do not degrade, they disappear — the rubric line
+   above every title loses its marker entirely.
+
+   The watermark is dropped (a full-bleed plate cannot survive the flattening
+   and only muddies the ground), and the small marks are redrawn as a border in
+   the system's own ink so the rubric line still has something on it. */
+@media (forced-colors: active) {
+  body::after {
+    display: none;
+  }
+
+  .breadcrumb-container::before,
+  .search-container .result-card::before {
+    -webkit-mask-image: none;
+    mask-image: none;
+    background-color: transparent;
+    border: 1px solid CanvasText;
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 50%;
+  }
+
+  /* The leaf is drawn with a hairline that forced colours would erase along
+     with everything else painted in a custom tone. */
+  .popover > .popover-inner,
+  .search-container > .search-space > :not(.ghost-text):not(.tag-suggestions) {
+    border: 1px solid CanvasText;
+  }
+
+  /* Callout forms are distinguished by border style alone once colour goes. */
+  .callout {
+    border: 1px solid CanvasText;
+  }
+}
+
+/* SPA navigation is on and there are transitions throughout the file. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* =========================================================================
+   Print
+
+   A game master prints or PDFs a section sooner or later, and paper is the one
+   context where the parchment ground actively hurts: it costs a full-page ink
+   wash and buys nothing, since the texture that justifies it does not survive
+   a laser printer.
+
+   The rubrics and hairlines do carry over — better than to screen, in fact —
+   so the page keeps its structure and loses only what is screen furniture.
+   ========================================================================= */
+
+@media print {
+  /* The grain, the crows, and every panel painted in a theme tone. */
+  body::before,
+  body::after {
+    display: none !important;
+  }
+
+  :root,
+  :root[saved-theme="dark"] {
+    --karta: transparent;
+    --karta-tlo: transparent;
+    --light: #fff;
+    --dark: #000;
+    --darkgray: #1a1a1a;
+    --secondary: #6d2519;
+    --marginalia-ink: #4a4038;
+  }
+
+  body,
+  .page,
+  #quartz-body,
+  .center,
+  article {
+    background: transparent !important;
+    color: #000;
+  }
+
+  /* Screen furniture: masthead, both rails, the toolbar, the footer nav. */
+  .page-title,
+  .site-nav,
+  .sidebar,
+  .search,
+  .darkmode,
+  .readermode,
+  .toc,
+  .backlinks,
+  .explorer,
+  .breadcrumb-container,
+  .content-meta,
+  footer {
+    display: none !important;
+  }
+
+  .center,
+  #quartz-body,
+  .page {
+    display: block !important;
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  article .markdown-preview-view > * {
+    max-width: none !important;
+  }
+
+  /* A printed rule still has to cite. Internal targets are expanded to the
+     live site, so a reference followed on paper can be typed back in. */
+  article a[href^="/"]::after,
+  article a[href^="http"]::after {
+    content: " <" attr(href) ">";
+    font-size: 0.8em;
+    font-family: var(--codeFont);
+    color: #444;
+    word-break: break-all;
+  }
+
+  /* The anchor link on every heading, the topic chips, and the "on this page"
+     markers are navigation, so they get no URL and no space. */
+  article a[role="anchor"]::after,
+  a.tag-link::after,
+  a.internal-link[data-no-popover]::after {
+    content: "" !important;
+  }
+
+  /* Nothing that reads as one unit may split across a page break. */
+  .callout,
+  article table,
+  article blockquote,
+  article pre,
+  .table-container {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  article h1,
+  article h2,
+  article h3,
+  article h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  article p,
+  article li {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* The drop cap survives — it is the one ornament that belongs on paper. */
+}
+
+/* =========================================================================
+   404 — the one page with nothing to compete with
+
+   `byPageType["404"]` empties `beforeBody`, `left` and `right`, so this is the
+   only page with no masthead, no rail and no rubric trail. Its traffic is a
+   link pasted into Discord months ago against a page that has since been
+   renamed, which makes it the first thing some readers see.
+
+   Given a bare page and a full-bleed plate already in the stylesheet, the
+   obvious move is to stop treating the watermark as a background and let it be
+   the illustration: the crows come up to full strength here, and the notice is
+   set as a colophon over them.
+   ========================================================================= */
+
+body[data-slug="404"] {
+  /* The plate carries the page, so it is no longer a whisper — and it is
+     allowed on the phone layout too, where there is nothing else to show. */
+  --kruki-opacity: 0.34;
+
+  &::after {
+    content: "";
+    position: fixed;
+    inset: auto 0 0 0;
+    height: min(56.28vw, 50.65rem);
+    z-index: 0;
+    pointer-events: none;
+    background-color: var(--kruki-ink);
+    opacity: var(--kruki-opacity);
+    -webkit-mask-image: var(--kruki);
+    mask-image: var(--kruki);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center bottom;
+    mask-position: center bottom;
+    -webkit-mask-size: min(100%, 90rem) auto;
+    mask-size: min(100%, 90rem) auto;
+  }
+
+  /* The leaf is dropped here. Everywhere else it is the sheet the rules are
+     written on; on this page there are no rules, and a lit rectangle sitting
+     over the plate cuts the birds in half. */
+  .center.minimal {
+    position: relative;
+    z-index: 1;
+    max-width: 34rem;
+    margin: 18vh auto 0;
+    text-align: center;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+
+    /* The head and foot hairlines are the leaf's frame; with the leaf gone they
+       are two rules floating in the middle of a plate of birds. */
+    &::before,
+    &::after {
+      display: none !important;
+    }
+  }
+
+  /* The number is the ornament: set at plate size in the header face, in the
+     marginalia ink so it reads as a catalogue mark rather than as an error. */
+  article h1 {
+    font-family: var(--headerFont);
+    font-weight: 400;
+    font-size: clamp(5rem, 18vw, 9rem);
+    line-height: 0.9;
+    letter-spacing: 0.04em;
+    color: var(--marginalia-ink);
+    margin: 0 0 0.4rem;
+    border: none;
+  }
+
+  article p {
+    font-family: var(--headerFont);
+    font-size: 1.25rem;
+    font-style: italic;
+    color: var(--darkgray);
+    max-width: none;
+    margin: 0 auto 2rem;
+  }
+
+  /* The rubric ornament the rest of the site puts above a title, used here as
+     a rule under the notice. */
+  article p::after {
+    content: var(--ornament);
+    display: block;
+    margin-top: 1.6rem;
+    font-style: normal;
+    font-size: 0.8rem;
+    letter-spacing: 0.5em;
+    color: var(--gray);
+  }
+
+  article a {
+    font-family: var(--headerFont);
+    font-size: 1.05rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--secondary);
+    border-bottom: 1px solid currentColor;
+    text-decoration: none;
+  }
+}
+
+/* =========================================================================
+   Section landing pages — announce the shelf
+
+   Arriving at `/militaria/` should say which shelf you are standing at before
+   the prose starts. The emblem is already in the DOM's reach through
+   `--sekcja-emblemat`; here it is drawn large and faint behind the folder
+   note, the way the crows work but scoped to one column.
+   ========================================================================= */
+
+/* Hung off the listing itself rather than off `.center`, whose `::before` is
+   already the leaf's head rule and carries an id in its selector — the emblem
+   would have lost that fight and been drawn as a 1px hairline. */
+.page:has(.site-nav-link[aria-current="page"]) .page-listing {
+  position: relative;
+}
+
+.page:has(.site-nav-link[aria-current="page"]) .page-listing::before {
+  content: "";
+  position: absolute;
+  top: -4.5rem;
+  right: -2.5rem;
+  width: 15rem;
+  height: 15rem;
+  z-index: 0;
+  pointer-events: none;
+  background-color: var(--sekcja-akcent);
+  opacity: 0.1;
+  -webkit-mask-image: var(--sekcja-emblemat);
+  mask-image: var(--sekcja-emblemat);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.page-listing ul.section-ul {
+  position: relative;
+  z-index: 1;
+}
+
+/* A 14rem plate beside a 343px column is not a watermark, it is a background. */
+@media all and (max-width: 800px) {
+  .page:has(.site-nav-link[aria-current="page"]) .page-listing::before {
+    display: none;
+  }
+}
+
+/* =========================================================================
+   Dziennik zmian — annals, not a list
+
+   Every entry opens with its date as an h3, and left at heading weight the
+   page reads as a stack of headings with the actual changes buried under
+   them. Set as a dated rubric — small caps in the marginalia ink, over a
+   hairline that runs the measure — the date becomes the year-mark of an
+   annal and the entry under it becomes the record.
+
+   Hung into the left margin instead, which is the obvious move, it lands
+   outside the leaf and reads as a note about the document rather than as part
+   of it: the leaf border cuts straight through the date.
+   ========================================================================= */
+
+body[data-slug="dziennik-zmian"] article {
+  h3 {
+    margin-top: 2.8em;
+    margin-bottom: 0.9em;
+    padding-top: 0.7em;
+    border-top: 1px solid var(--karta-linia);
+    font-family: var(--headerFont);
+    font-size: 0.92em;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--marginalia-ink);
+  }
+
+  /* The first entry sits straight under the section heading, which already
+     carries its own rule. */
+  h2 + h3 {
+    margin-top: 1.4em;
+    padding-top: 0;
+    border-top: none;
+  }
+
+  /* `Strona:`, `Zmiana:`, `Powód:` are the fields of a record. */
+  h3 + ul > li > strong:first-child {
+    color: var(--marginalia-ink);
+    font-weight: 600;
+  }
+}

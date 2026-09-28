@@ -1,0 +1,40 @@
+{
+  "name": "@wiki/nawigacja",
+  "version": "1.0.0",
+  "description": "Header navigation for a Polish rules wiki.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "import": "./index.js"
+    },
+    "./components": {
+      "import": "./components.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./index.js",
+  "sideEffects": false,
+  "peerDependencies": {
+    "preact": "^10.0.0"
+  },
+  "quartz": {
+    "name": "nawigacja",
+    "displayName": "Nawigacja",
+    "category": "component",
+    "version": "1.0.0",
+    "quartzVersion": ">=5.0.0",
+    "dependencies": [],
+    "defaultOrder": 15,
+    "defaultEnabled": true,
+    "defaultOptions": {},
+    "components": {
+      "Nawigacja": {
+        "displayName": "Nawigacja",
+        "defaultPosition": "left",
+        "defaultPriority": 15
+      }
+    }
+  }
+}

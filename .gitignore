@@ -1,0 +1,34 @@
+.DS_Store
+node_modules
+public
+prof
+tsconfig.tsbuildinfo
+.quartz-cache
+.quartz/
+private/
+quartz/cli/tui/dist/
+
+# NOTE: `.obsidian/` is deliberately NOT ignored. Upstream Quartz ignores it,
+# but this repository doubles as a shared Obsidian vault and the config is
+# committed so every moderator gets the same conventions (wikilinks on, new
+# notes in content/zasady/, templates in _szablony/). See README.md.
+#
+# Obsidian writes some volatile per-user state into .obsidian/ as well; those
+# files are excluded individually below rather than ignoring the whole folder.
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/graph.json
+.obsidian/hotkeys.json
+.obsidian/cache
+
+# adding the same ignores for vaults running in content folder
+content/.obsidian/workspace.json
+content/.obsidian/workspace-mobile.json
+content/.obsidian/graph.json
+content/.obsidian/hotkeys.json
+content/.obsidian/cache
+
+# Source material for site graphics: the image-model prompts and the raw
+# generated plates. The processed asset that the site actually serves lives in
+# quartz/static/ and is committed; this folder is the working copy behind it.
+_grafika/

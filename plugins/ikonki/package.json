@@ -1,0 +1,37 @@
+{
+  "name": "@wiki/ikonki",
+  "version": "1.0.0",
+  "description": "Discord-style icon shortcodes for Quartz: `:zloto:` expands to the matching embed from content/ikonki.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "import": "./index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./index.js",
+  "sideEffects": false,
+  "quartz": {
+    "name": "ikonki",
+    "displayName": "Ikonki",
+    "category": "transformer",
+    "version": "1.0.0",
+    "quartzVersion": ">=5.0.0",
+    "dependencies": [],
+    "defaultOrder": 28,
+    "defaultEnabled": true,
+    "defaultOptions": {
+      "directory": "ikonki"
+    },
+    "optionSchema": {
+      "directory": {
+        "type": "string"
+      },
+      "labels": {
+        "type": "object"
+      }
+    }
+  }
+}
