@@ -4,26 +4,14 @@ import { pathToRoot, joinSegments } from "@quartz-community/utils"
 /**
  * Header navigation.
  *
- * One entry per section of the rules. Each points at a folder under content/,
- * so the destination is the folder's own listing page and every rule inside it
- * is a child of that section — which is also what makes the "current section"
- * test a simple slug-prefix check.
- *
- * The folders are named in Polish on disk (content/Dwór/…). The slug patch
- * folds them to ASCII for the URL (/dwor/), while Quartz takes the folder
- * page's title from the original directory name, so the heading reads "Dwór".
- *
- * A tree explorer in a left column would be more machinery than four
- * destinations need; the explorer is kept for mobile, where it is the drawer.
+ * Each category points at a folder under content/, making every page inside
+ * that folder a child of the category.
  */
 const SECTIONS = [
-  { label: "Podstawy", slug: "podstawy" },
-  { label: "Postacie", slug: "postacie" },
-  { label: "Świat", slug: "swiat" },
-  { label: "Zasady", slug: "zasady" },
-  { label: "Przedmioty", slug: "przedmioty" },
-  { label: "Scenariusze", slug: "scenariusze" },
-  { label: "Słownik", slug: "slownik" },
+  { label: "Species", slug: "species" },
+  { label: "Classes", slug: "classes" },
+  { label: "Feats", slug: "feats" },
+  { label: "Backgrounds", slug: "backgrounds" },
 ]
 
 const Nawigacja = ({ fileData, displayClass }) => {
@@ -56,10 +44,7 @@ const Nawigacja = ({ fileData, displayClass }) => {
 }
 
 Nawigacja.css = `
-/* Six sections now, with a seventh (Militaria) planned. The row has to fit
-   between the wordmark and the toolbar on a full-size window, so the gap and
-   the size are tuned to hold seven labels — "Niesamowitości" being the long
-   one — rather than to look comfortable with four. */
+/* Keep the category row compact between the wordmark and toolbar. */
 .site-nav {
   display: flex;
   align-items: baseline;

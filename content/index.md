@@ -7,20 +7,14 @@ modified: 2026-09-28
 draft: false
 ---
 
-# Nazwa wiki
+# D&D 2024
 
-Witaj w bazie zasad. To miejsce na reguły, materiały pomocnicze i informacje potrzebne podczas gry.
+Indeks opcji postaci do Dungeons & Dragons 2024.
 
-## Działy
+## Kategorie
 
-- [[podstawy/Podstawy]]
-- [[postacie/Postacie]]
-- [[swiat/Świat]]
-- [[zasady/Zasady]]
-- [[przedmioty/Przedmioty]]
-- [[scenariusze/Scenariusze]]
-- [[slownik/Słownik]]
+- [[species/Species]]
+- [[classes/Classes]]
+- [[feats/Feats]]
+- [[backgrounds/Backgrounds]]
 
-## Jak korzystać z wiki
-
-Każdy temat powinien być osobną stroną Markdown. Odnośniki między stronami zapisuj jako wikilinki, na przykład `[[Podstawy]]`.
