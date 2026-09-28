@@ -10,3 +10,5 @@ draft: false
 # Classes
 
 Indeks klas postaci. Szczegółowe opisy można dodawać jako osobne strony w tej kategorii.
+
+- [[Rogue]]

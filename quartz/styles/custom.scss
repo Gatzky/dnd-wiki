@@ -2844,55 +2844,6 @@ body[data-slug="404"] {
 }
 
 /* =========================================================================
-   Section landing pages — announce the shelf
-
-   Arriving at `/militaria/` should say which shelf you are standing at before
-   the prose starts. The emblem is already in the DOM's reach through
-   `--sekcja-emblemat`; here it is drawn large and faint behind the folder
-   note, the way the crows work but scoped to one column.
-   ========================================================================= */
-
-/* Hung off the listing itself rather than off `.center`, whose `::before` is
-   already the leaf's head rule and carries an id in its selector — the emblem
-   would have lost that fight and been drawn as a 1px hairline. */
-.page:has(.site-nav-link[aria-current="page"]) .page-listing {
-  position: relative;
-}
-
-.page:has(.site-nav-link[aria-current="page"]) .page-listing::before {
-  content: "";
-  position: absolute;
-  top: -4.5rem;
-  right: -2.5rem;
-  width: 15rem;
-  height: 15rem;
-  z-index: 0;
-  pointer-events: none;
-  background-color: var(--sekcja-akcent);
-  opacity: 0.1;
-  -webkit-mask-image: var(--sekcja-emblemat);
-  mask-image: var(--sekcja-emblemat);
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-}
-
-.page-listing ul.section-ul {
-  position: relative;
-  z-index: 1;
-}
-
-/* A 14rem plate beside a 343px column is not a watermark, it is a background. */
-@media all and (max-width: 800px) {
-  .page:has(.site-nav-link[aria-current="page"]) .page-listing::before {
-    display: none;
-  }
-}
-
-/* =========================================================================
    Dziennik zmian — annals, not a list
 
    Every entry opens with its date as an h3, and left at heading weight the

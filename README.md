@@ -4,7 +4,7 @@ Static rules wiki for a tabletop role-playing game. Built with [Quartz 5](https:
 
 The site is the authoritative rules reference: game masters propose rule changes as pull requests, players read the result and link to specific rules from Discord.
 
-**The site is entirely in Polish.** Code comments and this README are in English; every user-facing string is Polish. Game-master-facing documentation is [`CONTRIBUTING.md`](CONTRIBUTING.md), also in Polish.
+Repository documentation is written in English. The game-master guide is [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ---
 
@@ -48,45 +48,30 @@ Measures WCAG contrast for the palette in both light and dark mode.
 
 ## Repository layout
 
-| Path                               | Purpose                                                                                   |
-| ---------------------------------- | ----------------------------------------------------------------------------------------- |
-| `content/`                         | The vault. Everything here becomes a page.                                                |
-| `content/index.md`                 | Home page.                                                                                |
-| `content/wprowadzenie/`            | Fluffy introductions — one letter per Small Council seat.                                 |
-| `content/Podstawy/`                | Rule pages — core rules. Served at `/podstawy/`.                                          |
-| `content/Dwór/`                    | Rule pages — court and characters. Served at `/dwor/`.                                    |
-| `content/Gospodarka/`              | Rule pages — economy and holdings. Served at `/gospodarka/`.                              |
-| `content/Dyplomacja/`              | Rule pages — diplomacy and influence. Served at `/dyplomacja/`.                           |
-| `content/Intrygi/`                 | Rule pages — plots and hidden characters. Served at `/intrygi/`.                          |
-| `content/Militaria/`               | Rule pages — armies, fleets, sieges and battle. Served at `/militaria/`.                  |
-| `content/Niesamowitości/`          | Rule pages — religion, blessings and the uncanny. Served at `/niesamowitosci/`.           |
-| `content/zalaczniki/wprowadzenie/` | Portraits for the introduction letters.                                                   |
-| `content/dziennik-zmian.md`        | Changelog. Format documented on the page itself.                                          |
-| `content/slownik.md`               | Glossary.                                                                                 |
-| `_szablony/`                       | Obsidian note templates. Excluded from the build via `ignorePatterns`.                    |
-| `.obsidian/`                       | Obsidian vault config, committed so every game master gets the same setup.                |
-| `content/.obsidian/`               | A second vault config, for opening `content/` directly. Carries the obsidian-git plugin.  |
-| `quartz.config.yaml`               | Site configuration: title, locale, theme, plugins.                                        |
-| `quartz.ts`                        | TypeScript entry point. Only for options that cannot be expressed in YAML.                |
-| `quartz/`                          | Quartz core. Mostly untouched — see [What is modified](#what-is-modified-in-quartz-core). |
-| `quartz/polish/`                   | Polish helpers: diacritic folding, plural rule, date format, topic segment and labels.    |
-| `quartz/styles/custom.scss`        | The "Archiwum Cytadeli" theme.                                                            |
-| `plugins/typografia-pl/`           | Local Quartz plugin: Polish typography and drop-cap marking.                              |
-| `plugins/nawigacja/`               | Local Quartz plugin: the masthead navigation component.                                   |
-| `scripts/`                         | Build-time patching and verification scripts.                                             |
-| `public/`                          | Build output. Not committed.                                                              |
+| Path                        | Purpose                                                                                   |
+| --------------------------- | ----------------------------------------------------------------------------------------- |
+| `content/`                  | The vault. Everything here becomes a page.                                                |
+| `content/index.md`          | Home page.                                                                                |
+| `content/species/`          | Species entries, including nested pages such as `Rogue/Swashbuckler.md`.                  |
+| `content/classes/`          | Class entries and their nested subclasses.                                                |
+| `content/feats/`            | Feat entries.                                                                             |
+| `content/backgrounds/`      | Background entries.                                                                       |
+| `_szablony/`                | Obsidian note templates. Excluded from the build via `ignorePatterns`.                    |
+| `.obsidian/`                | Obsidian vault config, committed so every game master gets the same setup.                |
+| `content/.obsidian/`        | A second vault config, for opening `content/` directly. Carries the obsidian-git plugin.  |
+| `quartz.config.yaml`        | Site configuration: title, locale, theme, plugins.                                        |
+| `quartz.ts`                 | TypeScript entry point. Only for options that cannot be expressed in YAML.                |
+| `quartz/`                   | Quartz core. Mostly untouched — see [What is modified](#what-is-modified-in-quartz-core). |
+| `quartz/polish/`            | Polish helpers: diacritic folding, plural rule, date format, topic segment and labels.    |
+| `quartz/styles/custom.scss` | The "Archiwum Cytadeli" theme.                                                            |
+| `plugins/typografia-pl/`    | Local Quartz plugin: Polish typography and drop-cap marking.                              |
+| `plugins/nawigacja/`        | Local Quartz plugin: the masthead navigation component.                                   |
+| `scripts/`                  | Build-time patching and verification scripts.                                             |
+| `public/`                   | Build output. Not committed.                                                              |
 
 ### Editing without Obsidian
 
-The repository doubles as an Obsidian vault, but nothing requires Obsidian. A game master editing a file in the GitHub web UI can produce a valid page from the schema documented in `CONTRIBUTING.md`. The Obsidian config only sets conventions that match what the build expects: wikilinks on, markdown links off, new notes in `content/Podstawy/`, templates in `_szablony/`.
-
-**Rules are filed by section folder, not by tag.** The seven `content/` folders above _are_ the seven sections in the masthead — a page's folder decides which section it belongs to and what its URL is, so moving a file between folders moves it between sections. Adding a section means creating the folder and adding an entry to `SECTIONS` in [`plugins/nawigacja/components.js`](plugins/nawigacja/components.js); the masthead does not discover folders on its own, and seven entries is roughly what fits on one line at 1280px.
-
-Section folders are named in Polish on disk (`content/Dwór/`); the slug patch folds that to `/dwor/` for the URL, while Quartz takes the folder page's heading from the original directory name, so it reads "Dwór".
-
-One consequence worth knowing: a page whose name matches its folder becomes that folder's landing page. `content/Dwór/Dwór.md` is served at `/dwor/` and `content/Intrygi/Intrygi.md` at `/intrygi/`, with Quartz rendering the page's prose above the list of the other pages in the section. That is Quartz's own convention for folder index pages, not something configured here. Such a page is a real rule page in every other respect — it takes a table of contents and backlinks like any other. The remaining sections have no folder note, so their landing pages are generated and contain only the listing.
-
-Open the **repository root** as the vault, not `content/` — the templates folder sits outside `content/`, and non-content folders are hidden via `userIgnoreFilters`. A second, smaller vault config exists at `content/.obsidian/` for opening `content/` on its own; it carries the obsidian-git plugin used to sync edits.
+The repository can be edited directly in GitHub's web interface; Obsidian is optional. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for page structure, frontmatter, and category conventions. The four top-level category folders determine the published URL, while nested folders create nested pages.
 
 ---
 

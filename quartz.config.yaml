@@ -6,8 +6,8 @@
 # in YAML. Those live in `quartz.ts` as `loadQuartzConfig()` overrides.
 
 configuration:
-  pageTitle: "Nazwa wiki"
-  pageTitleSuffix: " · zasady gry"
+  pageTitle: "DND Wiki"
+  pageTitleSuffix: " · Template"
   enableSPA: true
   # Popovers preview a linked rule on hover, so a reader can check a
   # cross-reference without losing their place in the current rule.
