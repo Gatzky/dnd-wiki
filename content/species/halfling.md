@@ -1,5 +1,5 @@
 ---
-title: halfling
+title: Halfling
 description: Cechy gatunku halfling w Dungeons & Dragons 2024.
 tags: [species]
 created: 2026-09-28
@@ -7,19 +7,27 @@ modified: 2026-09-28
 draft: false
 ---
 
-# halfling
+Cherished and guided by gods who value life, home, and hearth, halflings gravitate toward bucolic havens where family and community help shape their lives. That said, many halflings possess a brave and adventurous spirit that leads them on journeys of discovery, affording them the chance to explore a bigger world and make new friends along the way. Their size - similar to that of a human child -helps them pass through crowds unnoticed and slip through tight spaces.
 
-Halfling jest humanoidem małego rozmiaru, zwykle mierzącym około 60–90 cm wzrostu. Jego szybkość wynosi 30 stóp.
+Anyone who has spent time around halflings, particularly halfling adventurers, has likely witnessed the storied “luck of the halflings” in action. When a halfling is in mortal danger, an unseen force seems to intervene on the halfling’s behalf. Many halflings believe in the power of luck, and they attribute their unusual gift to one or more of their benevolent gods, including Yondalla, Brandobaris, and Charmalaine. The same gift might contribute to their robust life spans (about 150 years).
 
-## Cechy gatunku
+Halfling communities come in all varieties. For every sequestered shire tucked away in an unspoiled part of the world, there's a crime syndicate like the Boromar Clan in the Eberron setting or a territorial mob of halflings like those in the Dark Sun setting.
 
-- **Odważny.** Halfling ma przewagę w rzutach obronnych wykonywanych, aby uniknąć stanu Przerażony lub go zakończyć.
-- **Zwinność halflinga.** Może przechodzić przez przestrzeń zajmowaną przez istotę większą od siebie, ale nie może zakończyć tam ruchu.
-- **Szczęście.** Gdy na kości k20 testu k20 wypadnie 1, halfling może przerzucić kość. Musi użyć nowego wyniku.
-- **Naturalny skradacz.** Halfling może wykonać akcję Ukrywanie się, gdy jedyną osłonę zapewnia mu istota co najmniej o jeden rozmiar większa.
+Halflings who prefer to live underground are sometimes called strongheart halflings or stouts. Nomadic halflings, as well as those who live among humans and other tall folk, are sometimes called lightfoot halflings or tallfellows.
 
-## Opis
+## Halfling Traits
+**Creature Type:** Humanoid
+**Size:** Small (about 2-3 feet tall)
+**Speed:** 30 feet
 
-Halflingowie są niewielkim ludem znanym z przywiązania do wspólnoty i domowego życia. Ich niewielki wzrost nie przeszkadza im w podróżowaniu ani podejmowaniu ryzyka; szczęście i spryt pomagają im radzić sobie w niebezpiecznych sytuacjach.
+As a Halfling, you have these special traits.
 
-Źródło zasad: [Halfling — D&D 5e (2024)](https://dnd2024.wikidot.com/species:halfling).
+**Brave.** You have Advantage on saving throws you make to avoid or end the Frightened condition.
+
+**Halfling Nimbleness.** You can move through the space of any creature that is a size larger than you, but you can't stop in the same space.
+
+**Luck.** When you roll a 1 on the d20 of a D20 Test, you can reroll the die, and you must use the new roll.
+
+**Naturally Stealthy.** You can take the Hide action even when you are obscured only by a creature that is at least one size larger than you.
+
+**Źródło zasad:** [Halfling — D&D 5e (2024)](https://dnd2024.wikidot.com/species:halfling).
