@@ -1,6 +1,6 @@
 # DND Gatzky — zasady gry
 
-Static rules wiki for a tabletop role-playing game. Built with [Quartz 5](https://quartz.jzhao.xyz) and published at [dnd-gatzky.dev](https://dnd-gatzky.dev).
+Static rules wiki for a tabletop role-playing game. Built with [Quartz 5](https://quartz.jzhao.xyz) and published at [gatzky.github.io/dnd-wiki](https://gatzky.github.io/dnd-wiki/).
 
 The site is the authoritative rules reference: game masters propose rule changes as pull requests, players read the result and link to specific rules from Discord.
 
@@ -91,28 +91,15 @@ Open the **repository root** as the vault, not `content/` — the templates fold
 
 ---
 
-## Deployment — Cloudflare Pages
+## Deployment — GitHub Pages
 
-The repository is private and deploys to Cloudflare Pages. Settings to enter in the dashboard:
+The `Deploy wiki` workflow builds the site and publishes the `public/` directory to GitHub Pages whenever a commit is pushed to `main`. The site uses the default project URL, <https://gatzky.github.io/dnd-wiki/>; no custom domain or DNS records are required. In the repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**.
 
-| Setting                | Value                             |
-| ---------------------- | --------------------------------- |
-| Framework preset       | None                              |
-| Build command          | `npm install && npx quartz build` |
-| Build output directory | `public`                          |
-| Environment variable   | `NODE_VERSION` = `22.16.0`        |
+The `baseUrl` in `quartz.config.yaml` includes the repository path because this is a project site. If you rename the repository, update that value to match the new Pages URL.
 
-Notes on each:
+### Pull requests
 
-- **Build command.** Quartz's own documentation suggests `npx quartz plugin install && npx quartz build`. `npm install` covers it here, because every plugin this site uses is an npm dependency in `package.json` rather than a git-installed one, and `npm install` is also what triggers the Polish patch script. Running `npx quartz build` alone on a fresh clone would fail — there would be no `node_modules`.
-- **`NODE_VERSION`.** `22.16.0` is the version pinned in `.node-version`, and `package.json` requires `>=22`. Local development and every check in this README were run and verified against **Node 24.15.0 / npm 11.12.1**; both work. Pinning to 22.16.0 in CI keeps Cloudflare on the version upstream Quartz targets.
-- **Shallow clones.** Cloudflare shallow-clones the repository, so git history is not fully available. This site does not depend on it: `created`/`modified` come from frontmatter first, and every page carries both fields. If you later drop those fields and want git timestamps, prefix the build command with `git fetch --unshallow &&`.
-
-Before the first deploy, replace the `TODO-DOMENA` placeholder for `baseUrl` in `quartz.config.yaml` with the real hostname (no protocol, no trailing slash). RSS links, the sitemap and OG image URLs are all built from it and stay broken until you do.
-
-### Preview deployments
-
-Cloudflare Pages builds a separate preview for every pull request and posts the link as a comment. This is the main reason the review workflow works: a game master can see a rendered rule change before approving it, instead of reading a markdown diff. `CONTRIBUTING.md` tells game masters to check it.
+Pull requests are not deployed as previews. The site is rebuilt and published after changes are merged into `main`.
 
 ---
 

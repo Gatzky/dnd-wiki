@@ -16,7 +16,7 @@ configuration:
   locale: pl-PL
 
   # RSS links, OG image URLs and the sitemap are all built from this value
-  baseUrl: dnd-gatzky.dev
+  baseUrl: gatzky.github.io/dnd-wiki
 
   ignorePatterns:
     - private
