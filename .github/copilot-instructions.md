@@ -31,7 +31,6 @@ Polish poses four hard problems that aren't solvable by configuration alone. The
 
 Located in `plugins/`, wired in via `file:` npm dependencies (links to `node_modules` on Windows):
 
-- [`@uczta/ikonki`](plugins/ikonki/): Discord-style icon shortcodes. `:zloto:` (gold) in source expands to `content/ikonki/` embeds *before* markdown parsing
 - [`@uczta/typografia-pl`](plugins/typografia-pl/): Adds non-breaking spaces after single-letter words (Polish typography rule)
 - [`@uczta/nawigacja`](plugins/nawigacja/): Masthead navigation component
 
@@ -88,7 +87,6 @@ aliases:                    # Deprecated page names (redirect targets for Discor
 - **Wikilinks** (cross-references): `[[Pobór wojska]]` or `[[zasady/Pobór wojska|custom text]]`
   - Resolved to shortest valid slug via `@quartz-community/crawl-links`
   - If ambiguous, include folder path
-- **Icon shortcodes**: `:zloto:` (stored in `content/ikonki/zloto.md`) expands inline—used for resource counters in game rules
 - **Quotation marks**: No SmartyPants (disabled in config). Use Polish „straight" quotes directly; they're preserved as-is
 - **Editorial placeholders** (caught by linter): TODO, FIXME, XXX, TBD, LOREM (but bare `???` is allowed—it means hidden character location in game context)
 

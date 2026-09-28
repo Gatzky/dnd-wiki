@@ -36,15 +36,15 @@ configuration:
     colors:
       # "Archiwum Cytadeli" - a maester's archive of the realm's written law.
       lightMode:
-        light: "#EFE7D8" # parchment page background
-        lightgray: "#D6C9B0" # rule lines, borders
-        gray: "#A89572" # heavier borders, muted ornament
-        darkgray: "#241F1B" # body text, iron-gall ink
-        dark: "#1A1512" # headings, icons
-        secondary: "#8C2F22" # links, rubric red
-        tertiary: "#9A7B3F" # hover states, bronze
-        highlight: "rgba(140, 47, 34, 0.10)"
-        textHighlight: "#E8DCC4"
+        light: "#F2F0D9" # ivory paper with a soft olive cast
+        lightgray: "#D9DDB8" # sage table bands and rules
+        gray: "#9C9564" # olive-gold borders and ornament
+        darkgray: "#29271F" # body text, warm ink
+        dark: "#38291F" # headings, deep umber
+        secondary: "#873A2B" # links, brick-red rubric
+        tertiary: "#82723D" # hover states, muted gold
+        highlight: "rgba(135, 58, 43, 0.10)"
+        textHighlight: "#E6E2BF"
       # "Candlelit vault"
       darkMode:
         light: "#16130F"
@@ -81,18 +81,6 @@ plugins:
         dark: github-dark
       keepBackground: false
     order: 20
-
-  # Local plugin: Discord-style icon shortcodes. `:zloto:` in the source is
-  # expanded to the matching embed from content/ikonki before anything is
-  # parsed, so the rules can be written the way the game is played. Must stay
-  # ahead of obsidian-flavored-markdown, which turns the expansion into an
-  # actual image. Lives in ./plugins/ikonki, wired in as a `file:` dependency
-  # like the other local plugins.
-  - source: "@wiki/ikonki"
-    enabled: true
-    options:
-      directory: ikonki
-    order: 28
 
   - source: "@quartz-community/obsidian-flavored-markdown"
     enabled: true
@@ -319,10 +307,7 @@ plugins:
   - source: "@quartz-community/footer"
     enabled: true
     options:
-      # Rendered in source order: Discord sits on the left of the footer row,
-      # the changelog on the right. See the footer rules in custom.scss.
       links:
-        Serwer Discord: https://discord.gg/xb6TF9yNR
         Dziennik zmian: /dziennik-zmian
     layout:
       position: footer

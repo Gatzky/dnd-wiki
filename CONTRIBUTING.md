@@ -14,8 +14,6 @@ Nie musisz mieć Obsidiana ani niczego instalować. Wszystko poniżej da się zr
 - [Adresy stron](#adresy-stron)
 - [Odnośniki (wikilinki)](#odnosniki-wikilinki)
 - [Tematy](#tematy)
-- [Ikonki](#ikonki)
-  - [Kopiowanie na Discorda](#kopiowanie-na-discorda)
 - [Bloki wyróżnione](#bloki-wyroznione)
 - [Zapis i typografia](#zapis-i-typografia)
 - [Zmiana istniejącej zasady](#zmiana-istniejacej-zasady)
@@ -234,37 +232,6 @@ export const TEMAT_LABELS = {
 Temat bez wpisu wyświetli się po prostu z wielkiej litery (`cennik` → `Cennik`), co dla większości nazw wystarcza.
 
 Nie mnóż tematów. Lepiej mieć dziewięć używanych niż sześćdziesiąt, z których każdy występuje raz.
-
----
-
-## Ikonki
-
-Ikonki wstawiamy **skrótem w stylu Discorda**, a nie pełnym osadzeniem obrazka. Zapis `:zloto:` zamienia się podczas budowania strony na osadzenie odpowiedniego pliku z `content/ikonki`:
-
-```markdown
-Lenno przynosi 3 :zloto: dochodu.
-```
-
-Dlaczego tak, a nie `![[ikonki/zloto.png|złoto]]`:
-
-- Zasada z czterema ikonkami w jednym zdaniu pozostaje czytelna w źródle.
-- W komórce tabeli pełne osadzenie wymaga ucieczki każdej pionowej kreski (`\|`), przez co wiersz rozjeżdża się na kilkaset znaków. Skrót nie ma tego problemu — o ucieczkę dba wtyczka.
-- Piszemy tak, jak gra się w grę: na Discordzie te same ikonki są emoji.
-
-Zasady zapisu:
-
-- Nazwa skrótu to **nazwa pliku bez rozszerzenia**, bez polskich znaków: `:zloto:`, `:rozmiararmii:`, `:laska7:`.
-- Rozmiaru nie podajemy. Wysokość ikonki ustala arkusz stylów (`height: 1.15em`), więc dopisek `|18` i tak nic nie zmienia.
-- Skrót działa wszędzie w treści strony — w akapicie, w liście, w tabeli i w bloku `[!wzor]`. **Nie działa** w nagłówku strony (frontmatter), w kodzie w linii ani w bloku kodu — i o to chodzi, bo tam ikonka byłaby błędem.
-- Nieznany skrót zostaje w tekście taki, jaki jest. Jeśli w gotowej stronie widzisz `:zloto:` zamiast obrazka, sprawdź nazwę pliku w `content/ikonki`.
-
-### Kopiowanie na Discorda
-
-Zaznaczony fragment zasady można skopiować ze strony i wkleić prosto na Discorda — ikonki wracają wtedy do postaci skrótów (`:zloto:`), czyli tych samych, których Discord używa dla swoich emoji. Dlatego tekstem alternatywnym obrazka jest **skrót**, a nie polska nazwa: to on trafia do schowka.
-
-Polska nazwa nie ginie — wtyczka wpisuje ją w `title`, więc widać ją po najechaniu na ikonkę.
-
-Nową ikonkę dodajemy, wrzucając plik `.png` do `content/ikonki` — skrót o tej nazwie zaczyna działać od razu. Żeby ikonka miała jeszcze polską nazwę w dymku, dopisz ją do mapy `DEFAULT_LABELS` w `plugins/ikonki/index.js`.
 
 ---
 

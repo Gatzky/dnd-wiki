@@ -60,7 +60,6 @@ Measures WCAG contrast for the palette in both light and dark mode.
 | `content/Intrygi/`                 | Rule pages — plots and hidden characters. Served at `/intrygi/`.                          |
 | `content/Militaria/`               | Rule pages — armies, fleets, sieges and battle. Served at `/militaria/`.                  |
 | `content/Niesamowitości/`          | Rule pages — religion, blessings and the uncanny. Served at `/niesamowitosci/`.           |
-| `content/zalaczniki/ikonki/`       | Stat icons embedded inline in rule text.                                                  |
 | `content/zalaczniki/wprowadzenie/` | Portraits for the introduction letters.                                                   |
 | `content/dziennik-zmian.md`        | Changelog. Format documented on the page itself.                                          |
 | `content/slownik.md`               | Glossary.                                                                                 |
